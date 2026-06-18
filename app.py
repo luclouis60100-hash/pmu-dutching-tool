@@ -195,7 +195,7 @@ def pricing():
             if datetime.now() < expires_at:
                 return redirect(url_for('dashboard'))
     
-    return render_template('pricing_premium_only.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
+    return render_template('pricing.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
 
 @app.route('/dashboard')
 @premium_required
