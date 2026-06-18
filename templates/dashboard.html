@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PMU Tool - Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f0f0; }
+        
+        .topbar { background: linear-gradient(135deg, #1a56db 0%, #1449c1 100%); color: white; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 28px; font-weight: bold; }
+        .logout-btn { background: #dc2626; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; text-decoration: none; font-weight: bold; }
+        .logout-btn:hover { background: #991b1b; }
+        
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-btn { padding: 15px 25px; background: white; border: none; cursor: pointer; font-size: 16px; font-weight: 600; color: #666; border-bottom: 3px solid transparent; transition: all 0.3s; }
+        .tab-btn:hover { color: #1a56db; }
+        .tab-btn.active { color: #1a56db; border-bottom-color: #1a56db; }
+        
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        
+        .section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .section h2 { color: #1a56db; margin-bottom: 20px; font-size: 24px; }
+        
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #333; font-weight: 600; }
+        input[type="text"], input[type="number"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        
+        .info-card { background: #f8f9fb; padding: 20px; border-radius: 10px; border-left: 4px solid #1a56db; }
+        .info-card h3 { color: #1a56db; margin-bottom: 10px; }
+        .info-card p { color: #666; }
+        
+        button { padding: 12px 30px; background: #1a56db; color: white; border: none; border-radius: 5px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button:hover { background: #1449c1; }
+        
+        .result { background: #efe; padding: 20px; border-radius: 10px; margin-top: 20px; display: none; }
+        .result.show { display: block; }
+        .result h3 { color: #059669; margin-bottom: 15px; }
+        .result-item { padding: 10px; background: white; border-radius: 5px; margin: 10px 0; }
+        
+        .alert { background: #fee; padding: 15px; border-radius: 5px; color: #991b1b; margin-bottom: 20px; }
+        .alert.info { background: #efe; color: #059669; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #f8f9fb; font-weight: 600; color: #1a56db; }
+        tr:hover { background: #f8f9fb; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="logo">🏇 PMU Tool - Dashboard</div>
+        <a href="/logout" class="logout-btn">Logout</a>
+    </div>
+
+    <div class="container">
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('courses')">📊 Courses PMU</button>
+            <button class="tab-btn" onclick="switchTab('pronos')">📰 Pronos</button>
+            <button class="tab-btn" onclick="switchTab('help')">❓ Help</button>
+        </div>
+
+        <!-- TAB 1: Courses PMU -->
+        <div id="courses" class="tab-content active">
+            <div class="section">
+                <h2>📅 Courses PMU en Direct</h2>
+                <div class="alert info">Chargement des données PMU en temps réel...</div>
+                
+                <div class="form-group">
+                    <label>Sélectionner une réunion:</label>
+                    <select id="reunion-select">
+                        <option value="">-- Chargement --</option>
+                    </select>
+                </div>
+
+                <div id="courses-list" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <!-- TAB 2: Pronos -->
+        <div id="pronos" class="tab-content">
+            <div class="section">
+                <h2>📰 Pronos Paris-Turf</h2>
+                <p style="color: #666; margin-bottom: 20px;">Consultez les pronostics des experts Paris-Turf pour les courses du jour.</p>
+                
+                <div class="form-group">
+                    <label>Sélectionner une course:</label>
+                    <select id="pronos-select">
+                        <option value="">-- Chargement des courses --</option>
+                    </select>
+                </div>
+
+                <div id="pronos-list" style="margin-top: 20px;">
+                    <div class="alert">Sélectionnez une course pour voir les pronos</div>
+                </div>
+            </div>
+        </div>
+        <div id="help" class="tab-content">
+            <div class="section">
+                <h2>❓ Aide & Documentation</h2>
+                
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <h3>📊 Onglet Courses PMU</h3>
+                    <p>Consultez les réunions PMU du jour avec les listes complètes de chevaux, cotes live et musiques. Sélectionnez une course pour voir tous les détails et les données en temps réel depuis turfinfo.pmu.fr.</p>
+                </div>
+
+                <div class="info-card" style="margin-bottom: 20px;">
+                    <h3>📰 Onglet Pronos</h3>
+                    <p>Accédez aux pronostics Paris-Turf pour chaque course. Consultez les recommandations des experts et les cotes estimées pour prendre des décisions éclairées.</p>
+                </div>
+
+                <div class="info-card">
+                    <h3>🔄 Données en Temps Réel</h3>
+                    <p>Toutes les données PMU sont mises à jour en temps réel. Les cotes, arrivées officielles et pronostics se rafraîchissent automatiquement toutes les 20 secondes pendant les sessions de courses.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Load PMU data on page load
+        window.addEventListener('load', function() {
+            console.log('Dashboard chargé - PMU Terminal prêt');
+        });
+    </script>
+</body>
+</html>
