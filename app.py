@@ -22,12 +22,18 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_your_
 DB_FILE = 'pmu_users.db'
 
 # ============================================
-# DATABASE SETUP
+# DATABASE HELPERS WITH TIMEOUT
 # ============================================
+
+def get_db_connection():
+    """Get database connection with timeout"""
+    conn = sqlite3.connect(DB_FILE, timeout=10.0)  # 10 second timeout
+    conn.isolation_level = None  # Autocommit mode to avoid locks
+    return conn
 
 def init_db():
     """Initialize database with users and subscriptions tables"""
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_db_connection()
     c = conn.cursor()
     
     # Users table
@@ -78,18 +84,22 @@ def premium_required(f):
             return redirect(url_for('pricing'))
         
         user_id = session['user_id']
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-        result = c.fetchone()
-        conn.close()
-        
-        # Si pas de subscription ou expirée, redirection
-        if not result or result[0] is None:
-            return redirect(url_for('pricing'))
-        
-        expires_at = datetime.fromisoformat(result[0])
-        if datetime.now() > expires_at:
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+            result = c.fetchone()
+            conn.close()
+            
+            # Si pas de subscription ou expirée, redirection
+            if not result or result[0] is None:
+                return redirect(url_for('pricing'))
+            
+            expires_at = datetime.fromisoformat(result[0])
+            if datetime.now() > expires_at:
+                return redirect(url_for('pricing'))
+        except Exception as e:
+            print(f"[DB ERROR] {str(e)}")
             return redirect(url_for('pricing'))
         
         return f(*args, **kwargs)
@@ -123,7 +133,7 @@ def signup():
         
         try:
             hashed_password = hashlib.sha256(password.encode()).hexdigest()
-            conn = sqlite3.connect(DB_FILE)
+            conn = get_db_connection()
             c = conn.cursor()
             
             # Create user
@@ -146,6 +156,7 @@ def signup():
         except sqlite3.IntegrityError:
             return render_template('signup.html', error='Cet email est déjà inscrit')
         except Exception as e:
+            print(f"[SIGNUP ERROR] {str(e)}")
             return render_template('signup.html', error=f'Erreur: {str(e)}')
     
     return render_template('signup.html')
@@ -157,16 +168,19 @@ def login():
         password = request.form.get('password')
         
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('SELECT id, email FROM users WHERE email = ? AND password = ?', (email, hashed_password))
-        user = c.fetchone()
-        conn.close()
-        
-        if user:
-            session['user_id'] = user[0]
-            session['email'] = user[1]
-            return redirect(url_for('dashboard'))
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute('SELECT id, email FROM users WHERE email = ? AND password = ?', (email, hashed_password))
+            user = c.fetchone()
+            conn.close()
+            
+            if user:
+                session['user_id'] = user[0]
+                session['email'] = user[1]
+                return redirect(url_for('dashboard'))
+        except Exception as e:
+            print(f"[LOGIN ERROR] {str(e)}")
         
         return render_template('login.html', error='Email ou mot de passe incorrect')
     
@@ -186,16 +200,19 @@ def pricing():
     if 'user_id' in session:
         # Vérifier si l'utilisateur a accès premium
         user_id = session['user_id']
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-        result = c.fetchone()
-        conn.close()
-        
-        if result and result[0]:
-            expires_at = datetime.fromisoformat(result[0])
-            if datetime.now() < expires_at:
-                return redirect(url_for('dashboard'))
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+            result = c.fetchone()
+            conn.close()
+            
+            if result and result[0]:
+                expires_at = datetime.fromisoformat(result[0])
+                if datetime.now() < expires_at:
+                    return redirect(url_for('dashboard'))
+        except Exception as e:
+            print(f"[PRICING ERROR] {str(e)}")
     
     return render_template('pricing.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
 
@@ -219,25 +236,29 @@ def create_checkout_session():
         print(f"[DEBUG] Stripe API Key loaded: {stripe.api_key is not None and stripe.api_key != 'sk_test_your_key_here'}")
         
         # Create or get Stripe customer
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?', (user_id,))
-        result = c.fetchone()
-        
-        if result and result[0]:
-            customer_id = result[0]
-            print(f"[DEBUG] Using existing customer: {customer_id}")
-        else:
-            # Create new customer
-            print(f"[DEBUG] Creating new Stripe customer")
-            customer = stripe.Customer.create(email=email)
-            customer_id = customer.id
-            print(f"[DEBUG] New customer created: {customer_id}")
-            c.execute('UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?', 
-                     (customer_id, user_id))
-            conn.commit()
-        
-        conn.close()
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute('SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?', (user_id,))
+            result = c.fetchone()
+            
+            if result and result[0]:
+                customer_id = result[0]
+                print(f"[DEBUG] Using existing customer: {customer_id}")
+            else:
+                # Create new customer
+                print(f"[DEBUG] Creating new Stripe customer")
+                customer = stripe.Customer.create(email=email)
+                customer_id = customer.id
+                print(f"[DEBUG] New customer created: {customer_id}")
+                c.execute('UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?', 
+                         (customer_id, user_id))
+                conn.commit()
+            
+            conn.close()
+        except Exception as db_err:
+            print(f"[DB ERROR] {str(db_err)}")
+            raise
         
         # Create checkout session - Mode PAYMENT (one-time)
         print(f"[DEBUG] Creating checkout session with mode=payment")
@@ -285,7 +306,7 @@ def success():
         # Update subscription in database - 30 days access
         access_expires = datetime.now() + timedelta(days=30)
         
-        conn = sqlite3.connect(DB_FILE)
+        conn = get_db_connection()
         c = conn.cursor()
         c.execute('''
             UPDATE subscriptions 
@@ -302,6 +323,8 @@ def success():
     
     except Exception as e:
         print(f"[ERROR] Success page error: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return redirect(url_for('dashboard'))
 
 # ============================================
