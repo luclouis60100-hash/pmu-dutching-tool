@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+load_dotenv()
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import os
 import json
@@ -200,7 +202,7 @@ def pricing():
 @app.route('/dashboard')
 @premium_required
 def dashboard():
-    return render_template('dashboard_premium.html')
+    return render_template('dashboard.html')
 
 # ============================================
 # STRIPE PAYMENT ROUTES
@@ -213,6 +215,9 @@ def create_checkout_session():
         user_id = session['user_id']
         email = session['email']
         
+        print(f"[DEBUG] Creating checkout for user {user_id} ({email})")
+        print(f"[DEBUG] Stripe API Key loaded: {stripe.api_key is not None and stripe.api_key != 'sk_test_your_key_here'}")
+        
         # Create or get Stripe customer
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -221,17 +226,21 @@ def create_checkout_session():
         
         if result and result[0]:
             customer_id = result[0]
+            print(f"[DEBUG] Using existing customer: {customer_id}")
         else:
             # Create new customer
+            print(f"[DEBUG] Creating new Stripe customer")
             customer = stripe.Customer.create(email=email)
             customer_id = customer.id
+            print(f"[DEBUG] New customer created: {customer_id}")
             c.execute('UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?', 
                      (customer_id, user_id))
             conn.commit()
         
         conn.close()
         
-        # Create checkout session
+        # Create checkout session - Mode PAYMENT (one-time)
+        print(f"[DEBUG] Creating checkout session with mode=payment")
         checkout_session = stripe.checkout.Session.create(
             customer=customer_id,
             payment_method_types=['card'],
@@ -242,23 +251,24 @@ def create_checkout_session():
                         'name': 'PMUDutchingTool Premium - 1 Mois',
                         'description': 'Accès complet au tableau d\'analyse PMU'
                     },
-                    'unit_amount': 999,  # 9.99€ en centimes
-                    'recurring': {
-                        'interval': 'month',
-                        'interval_count': 1
-                    }
+                    'unit_amount': 999,
                 },
                 'quantity': 1
             }],
-            mode='subscription',
+            mode='payment',
             success_url=f'{request.host_url}success?session_id={{CHECKOUT_SESSION_ID}}',
             cancel_url=f'{request.host_url}pricing'
         )
         
+        print(f"[DEBUG] Checkout session created: {checkout_session.id}")
         return jsonify({'id': checkout_session.id})
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        error_msg = str(e)
+        print(f"\n[ERREUR STRIPE] {error_msg}\n")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': error_msg}), 400
 
 @app.route('/success')
 @login_required
@@ -272,7 +282,7 @@ def success():
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         user_id = session['user_id']
         
-        # Update subscription in database
+        # Update subscription in database - 30 days access
         access_expires = datetime.now() + timedelta(days=30)
         
         conn = sqlite3.connect(DB_FILE)
@@ -283,23 +293,49 @@ def success():
                 access_expires_at = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE user_id = ?
-        ''', (checkout_session.subscription, access_expires.isoformat(), user_id))
+        ''', (checkout_session.id, access_expires.isoformat(), user_id))
         conn.commit()
         conn.close()
         
+        print(f"[SUCCESS] Payment received for user {user_id}. Access until {access_expires}")
         return redirect(url_for('dashboard'))
     
     except Exception as e:
+        print(f"[ERROR] Success page error: {str(e)}")
         return redirect(url_for('dashboard'))
 
 # ============================================
 # API ROUTES - PMU DATA (PREMIUM ONLY)
 # ============================================
 
+@app.route('/api/<path:path>')
+@premium_required
+def api_proxy(path):
+    """Proxy générique pour l'API PMU - Premium only"""
+    try:
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
+        if request.query_string:
+            url += '?' + request.query_string.decode('utf-8')
+        
+        print(f"[API] Proxying to: {url}")
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+        
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return jsonify(data)
+    except Exception as e:
+        print(f"[API ERROR] {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/pmu/<path:path>')
 @premium_required
 def pmu_api(path):
-    """Proxy vers l'API PMU - Premium only"""
+    """Proxy vers l'API PMU - Premium only (alternative route)"""
     try:
         url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
         if request.query_string:
