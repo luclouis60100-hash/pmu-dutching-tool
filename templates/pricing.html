@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PMUDutchingTool - Tarifs</title>
+    <title>PMUDutchingTool - Accès Premium</title>
     <style>
         * {
             margin: 0;
@@ -22,7 +22,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             width: 100%;
         }
         
@@ -42,57 +42,27 @@
             opacity: 0.9;
         }
         
-        .pricing-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 30px;
-            margin-bottom: 40px;
-        }
-        
         .pricing-card {
             background: white;
             border-radius: 12px;
-            padding: 40px;
+            padding: 50px 40px;
             text-align: center;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
-        }
-        
-        .pricing-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
-        }
-        
-        .pricing-card.premium {
-            border: 3px solid #667eea;
-            transform: scale(1.05);
-        }
-        
-        .badge {
-            position: absolute;
-            top: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #667eea;
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: bold;
+            max-width: 600px;
+            margin: 0 auto;
         }
         
         .plan-name {
-            font-size: 1.5rem;
+            font-size: 2rem;
             margin-bottom: 10px;
             color: #333;
         }
         
         .price {
-            font-size: 2.5rem;
+            font-size: 3rem;
             font-weight: bold;
             color: #667eea;
-            margin: 20px 0;
+            margin: 30px 0;
         }
         
         .price small {
@@ -100,16 +70,27 @@
             color: #666;
         }
         
+        .description {
+            color: #666;
+            font-size: 1rem;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
         .features {
             list-style: none;
             text-align: left;
-            margin: 30px 0;
+            margin: 40px 0;
+            background: #f9f9f9;
+            padding: 30px;
+            border-radius: 8px;
         }
         
         .features li {
             padding: 12px 0;
-            border-bottom: 1px solid #eee;
             color: #666;
+            font-size: 1rem;
+            border-bottom: 1px solid #eee;
         }
         
         .features li:last-child {
@@ -123,25 +104,16 @@
             margin-right: 10px;
         }
         
-        .features li.disabled {
-            opacity: 0.5;
-        }
-        
-        .features li.disabled::before {
-            content: "✗ ";
-            color: #999;
-        }
-        
         .btn {
             width: 100%;
-            padding: 15px 30px;
+            padding: 18px 30px;
             border: none;
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s;
-            margin-top: 20px;
+            margin-top: 30px;
         }
         
         .btn-primary {
@@ -152,20 +124,6 @@
         .btn-primary:hover {
             background: #5568d3;
             transform: scale(1.02);
-        }
-        
-        .btn-secondary {
-            background: #f0f0f0;
-            color: #333;
-        }
-        
-        .btn-secondary:hover {
-            background: #e0e0e0;
-        }
-        
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
         }
         
         .auth-links {
@@ -180,54 +138,31 @@
             text-decoration: none;
             border-bottom: 2px solid rgba(255,255,255,0.5);
             transition: border-color 0.3s;
+            margin: 0 10px;
         }
         
         .auth-links a:hover {
             border-color: white;
         }
         
-        .features-comparison {
-            background: white;
-            border-radius: 12px;
-            padding: 40px;
-            margin-top: 40px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        
-        .comparison-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .comparison-table th,
-        .comparison-table td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .comparison-table th {
-            background: #f5f5f5;
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
             font-weight: bold;
+            margin-bottom: 15px;
         }
         
-        .comparison-table .check {
-            color: #667eea;
-            font-weight: bold;
-        }
-        
-        .comparison-table .cross {
-            color: #999;
-        }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-            
-            .pricing-card.premium {
-                transform: scale(1);
-            }
+        .highlight {
+            background: #fffbeb;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 30px 0;
+            color: #333;
         }
     </style>
 </head>
@@ -235,95 +170,39 @@
     <div class="container">
         <header>
             <h1>🏇 PMUDutchingTool</h1>
-            <p class="subtitle">L'outil ultime pour analyser et optimiser tes paris PMU</p>
+            <p class="subtitle">L'outil professionnel pour analyser et optimiser tes paris PMU</p>
         </header>
         
-        <div class="pricing-grid">
-            <!-- Free Plan -->
-            <div class="pricing-card">
-                <h2 class="plan-name">Gratuit</h2>
-                <div class="price">0€<small>/mois</small></div>
-                
-                <ul class="features">
-                    <li>Accès aux courses PMU</li>
-                    <li>3 analyses/jour</li>
-                    <li class="disabled">Pronos illimités</li>
-                    <li class="disabled">Analyse Musique Premium</li>
-                    <li class="disabled">Export de données</li>
-                </ul>
-                
-                <a href="/login" class="btn btn-secondary">Essayer Gratuitement</a>
+        <div class="pricing-card">
+            <div class="badge">Accès Premium Exclusif</div>
+            
+            <h2 class="plan-name">PMUDutchingTool Premium</h2>
+            <div class="price">9,99€<small>/mois</small></div>
+            
+            <p class="description">
+                Accès complet à notre tableau d'analyse avancé pour optimiser tous tes dutchings.
+            </p>
+            
+            <ul class="features">
+                <li>Tableau d'analyse complet</li>
+                <li>Analyse illimitée des courses</li>
+                <li>Historique des données</li>
+                <li>Calculs de dutching avancés</li>
+                <li>Export de données</li>
+                <li>Mise à jour en temps réel</li>
+            </ul>
+            
+            <div class="highlight">
+                <strong>✓ Accès immédiat</strong> — Commence à analyser dès que tu t'abonnes
             </div>
             
-            <!-- Premium Plan -->
-            <div class="pricing-card premium">
-                <div class="badge">⭐ Populaire</div>
-                <h2 class="plan-name">Premium</h2>
-                <div class="price">9,99€<small>/mois</small></div>
-                
-                <ul class="features">
-                    <li>Accès aux courses PMU</li>
-                    <li>Analyses illimitées</li>
-                    <li>Pronos Paris-Turf</li>
-                    <li>Analyse Musique Premium</li>
-                    <li>Export de données</li>
-                </ul>
-                
-                <button class="btn btn-primary" id="checkout-btn">
-                    Activer Premium (9,99€/mois)
-                </button>
-            </div>
-        </div>
-        
-        <!-- Features Comparison -->
-        <div class="features-comparison">
-            <h3 style="margin-bottom: 20px; color: #333;">Comparaison Détaillée</h3>
-            <table class="comparison-table">
-                <tr>
-                    <th>Fonctionnalité</th>
-                    <th>Gratuit</th>
-                    <th>Premium</th>
-                </tr>
-                <tr>
-                    <td><strong>Tableau d'analyse PMU</strong></td>
-                    <td class="check">✓</td>
-                    <td class="check">✓</td>
-                </tr>
-                <tr>
-                    <td><strong>Analyses par jour</strong></td>
-                    <td>3</td>
-                    <td class="check">Illimité</td>
-                </tr>
-                <tr>
-                    <td><strong>Pronos Paris-Turf</strong></td>
-                    <td class="cross">✗</td>
-                    <td class="check">✓</td>
-                </tr>
-                <tr>
-                    <td><strong>Analyse Musique</strong></td>
-                    <td class="cross">Basique</td>
-                    <td class="check">Premium</td>
-                </tr>
-                <tr>
-                    <td><strong>Variations Cotes</strong></td>
-                    <td class="cross">✗</td>
-                    <td class="check">✓</td>
-                </tr>
-                <tr>
-                    <td><strong>Export CSV/Excel</strong></td>
-                    <td class="cross">✗</td>
-                    <td class="check">✓</td>
-                </tr>
-                <tr>
-                    <td><strong>Support Email</strong></td>
-                    <td class="cross">✗</td>
-                    <td class="check">✓</td>
-                </tr>
-            </table>
+            <button class="btn btn-primary" id="checkout-btn">
+                S'abonner Maintenant (9,99€/mois)
+            </button>
         </div>
         
         <div class="auth-links">
-            <p>Déjà inscrit ? <a href="/login">Se connecter</a> | <a href="/signup">Créer un compte</a></p>
+            <p>Déjà abonné ? <a href="/login">Se connecter</a> | <a href="/signup">Créer un compte</a></p>
         </div>
     </div>
     
@@ -345,7 +224,6 @@
                     return;
                 }
                 
-                // Redirect to Stripe Checkout
                 const result = await stripe.redirectToCheckout({ sessionId: data.id });
                 if (result.error) {
                     alert('Erreur: ' + result.error.message);

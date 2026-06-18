@@ -43,7 +43,6 @@ def init_db():
         CREATE TABLE IF NOT EXISTS subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER NOT NULL,
-            plan TEXT DEFAULT 'free',
             stripe_customer_id TEXT,
             stripe_subscription_id TEXT,
             access_expires_at TIMESTAMP,
@@ -66,7 +65,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('pricing'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -74,7 +73,7 @@ def premium_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('login'))
+            return redirect(url_for('pricing'))
         
         user_id = session['user_id']
         conn = sqlite3.connect(DB_FILE)
@@ -83,12 +82,13 @@ def premium_required(f):
         result = c.fetchone()
         conn.close()
         
+        # Si pas de subscription ou expirée, redirection
         if not result or result[0] is None:
-            return jsonify({'error': 'Premium access required'}), 403
+            return redirect(url_for('pricing'))
         
         expires_at = datetime.fromisoformat(result[0])
         if datetime.now() > expires_at:
-            return jsonify({'error': 'Subscription expired'}), 403
+            return redirect(url_for('pricing'))
         
         return f(*args, **kwargs)
     return decorated_function
@@ -128,18 +128,18 @@ def signup():
             c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
             user_id = c.lastrowid
             
-            # Create free subscription
+            # Create subscription (empty, user must pay)
             c.execute('''
-                INSERT INTO subscriptions (user_id, plan, access_expires_at) 
-                VALUES (?, ?, ?)
-            ''', (user_id, 'free', None))
+                INSERT INTO subscriptions (user_id, access_expires_at) 
+                VALUES (?, ?)
+            ''', (user_id, None))
             
             conn.commit()
             conn.close()
             
             session['user_id'] = user_id
             session['email'] = email
-            return redirect(url_for('dashboard'))
+            return redirect(url_for('pricing'))
             
         except sqlite3.IntegrityError:
             return render_template('signup.html', error='Cet email est déjà inscrit')
@@ -182,36 +182,25 @@ def logout():
 @app.route('/pricing')
 def pricing():
     if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return render_template('pricing.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
+        # Vérifier si l'utilisateur a accès premium
+        user_id = session['user_id']
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+        result = c.fetchone()
+        conn.close()
+        
+        if result and result[0]:
+            expires_at = datetime.fromisoformat(result[0])
+            if datetime.now() < expires_at:
+                return redirect(url_for('dashboard'))
+    
+    return render_template('pricing_premium_only.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
 
 @app.route('/dashboard')
-@login_required
+@premium_required
 def dashboard():
-    user_id = session['user_id']
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute('SELECT plan, access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-    sub = c.fetchone()
-    conn.close()
-    
-    plan = sub[0] if sub else 'free'
-    expires_at = sub[1] if sub and sub[1] else None
-    
-    is_premium = False
-    days_left = 0
-    
-    if expires_at:
-        expires_date = datetime.fromisoformat(expires_at)
-        if datetime.now() < expires_date:
-            is_premium = True
-            days_left = (expires_date - datetime.now()).days
-    
-    return render_template('dashboard.html', 
-                         plan=plan,
-                         is_premium=is_premium,
-                         days_left=days_left,
-                         expires_at=expires_at)
+    return render_template('dashboard_premium.html')
 
 # ============================================
 # STRIPE PAYMENT ROUTES
@@ -251,7 +240,7 @@ def create_checkout_session():
                     'currency': 'eur',
                     'product_data': {
                         'name': 'PMUDutchingTool Premium - 1 Mois',
-                        'description': 'Accès illimité au tableau d\'analyse PMU'
+                        'description': 'Accès complet au tableau d\'analyse PMU'
                     },
                     'unit_amount': 999,  # 9.99€ en centimes
                     'recurring': {
@@ -263,7 +252,7 @@ def create_checkout_session():
             }],
             mode='subscription',
             success_url=f'{request.host_url}success?session_id={{CHECKOUT_SESSION_ID}}',
-            cancel_url=f'{request.host_url}dashboard'
+            cancel_url=f'{request.host_url}pricing'
         )
         
         return jsonify({'id': checkout_session.id})
@@ -290,12 +279,11 @@ def success():
         c = conn.cursor()
         c.execute('''
             UPDATE subscriptions 
-            SET plan = ?, 
-                stripe_subscription_id = ?, 
+            SET stripe_subscription_id = ?, 
                 access_expires_at = ?,
                 updated_at = CURRENT_TIMESTAMP
             WHERE user_id = ?
-        ''', ('premium', checkout_session.subscription, access_expires.isoformat(), user_id))
+        ''', (checkout_session.subscription, access_expires.isoformat(), user_id))
         conn.commit()
         conn.close()
         
@@ -305,13 +293,13 @@ def success():
         return redirect(url_for('dashboard'))
 
 # ============================================
-# API ROUTES - PMU DATA
+# API ROUTES - PMU DATA (PREMIUM ONLY)
 # ============================================
 
 @app.route('/api/pmu/<path:path>')
-@login_required
+@premium_required
 def pmu_api(path):
-    """Proxy vers l'API PMU"""
+    """Proxy vers l'API PMU - Premium only"""
     try:
         url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
         if request.query_string:
@@ -328,21 +316,6 @@ def pmu_api(path):
             return jsonify(data)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-@app.route('/api/paristurf/<date>/<course_key>')
-@premium_required
-def paristurf_api(date, course_key):
-    """Pronos Paris-Turf - Premium only"""
-    try:
-        url = f"https://www.paris-turf.com/api/pronostics/{date}/{course_key}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            return jsonify(data)
-    except Exception as e:
-        return jsonify({'error': 'Pronos unavailable'}), 500
 
 # ============================================
 # HEALTH CHECK
