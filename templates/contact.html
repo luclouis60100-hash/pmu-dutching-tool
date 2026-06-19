@@ -94,25 +94,6 @@
             cursor: not-allowed;
             transform: none;
         }
-        .message {
-            padding: 14px 16px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            font-size: 13px;
-            display: none;
-        }
-        .message.success {
-            background: #d1fae5;
-            color: #065f46;
-            border: 1px solid #6ee7b7;
-            display: block;
-        }
-        .message.error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fca5a5;
-            display: block;
-        }
         .back-link {
             text-align: center;
             margin-top: 20px;
@@ -135,9 +116,7 @@
             <p>Une question ? Une suggestion ? Nous vous répondrons rapidement !</p>
         </div>
 
-        <div id="message" class="message"></div>
-
-        <form id="contactForm">
+        <form action="https://formspree.io/f/mojzgvly" method="POST">
             <div class="form-group">
                 <label for="name">Votre nom *</label>
                 <input type="text" id="name" name="name" required placeholder="Jean Dupont">
@@ -155,64 +134,15 @@
 
             <div class="form-group">
                 <label for="message">Votre message *</label>
-                <textarea id="message-text" name="message" required placeholder="Écrivez votre message ici..."></textarea>
+                <textarea id="message" name="message" required placeholder="Écrivez votre message ici..."></textarea>
             </div>
 
-            <button type="submit" class="btn-submit" id="submitBtn">Envoyer le message</button>
+            <button type="submit" class="btn-submit">Envoyer le message</button>
         </form>
 
         <div class="back-link">
             <a href="/">← Retour à l'accueil</a>
         </div>
     </div>
-
-    <script>
-        const form = document.getElementById('contactForm');
-        const messageDiv = document.getElementById('message');
-        const submitBtn = document.getElementById('submitBtn');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            // Reset message
-            messageDiv.textContent = '';
-            messageDiv.className = 'message';
-            
-            // Disable button
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Envoi en cours...';
-
-            const formData = new FormData(form);
-
-            try {
-                const response = await fetch('/contact', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    messageDiv.className = 'message success';
-                    messageDiv.textContent = '✅ ' + data.message;
-                    form.reset();
-                    
-                    // Redirect after 2 seconds
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
-                } else {
-                    messageDiv.className = 'message error';
-                    messageDiv.textContent = '❌ ' + (data.error || 'Une erreur est survenue');
-                }
-            } catch (error) {
-                messageDiv.className = 'message error';
-                messageDiv.textContent = '❌ Erreur réseau : ' + error.message;
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Envoyer le message';
-            }
-        });
-    </script>
 </body>
 </html>
