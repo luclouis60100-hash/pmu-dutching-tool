@@ -1498,19 +1498,31 @@ async function renderPronosComparison() {
 
   try {
     let html = '<div class="tbl-wrap">';
-    html += '<table><thead><tr><th>N°</th><th>Cheval</th><th>Cote Live</th><th>Musique</th></tr></thead><tbody>';
+    html += '<table><thead><tr><th>N°</th><th>Cheval</th><th>Cote Live</th><th>Position</th><th>Résultat</th></tr></thead><tbody>';
     
     for (let i = 0; i < participants.length && i < 15; i++) {
       const cheval = participants[i] || {};
       const num = i + 1;
       const cote = cheval.coteP || cheval.cote || '—';
-      const musique = cheval.musique || '—';
       
-      html += `<tr><td><strong>${num}</strong></td><td>${cheval.nom || cheval.name || '—'}</td><td>${cote}</td><td>${musique}</td></tr>`;
+      // Chercher la position dans l'arrivée
+      let pos = '—';
+      let medal = '';
+      if (arrivee && arrivee.length > 0) {
+        const posIndex = arrivee.indexOf(num);
+        if (posIndex >= 0) {
+          pos = posIndex + 1;
+          if (pos === 1) medal = '🥇 1er';
+          else if (pos === 2) medal = '🥈 2e';
+          else if (pos === 3) medal = '🥉 3e';
+          else medal = `${pos}e`;
+        }
+      }
+      
+      html += `<tr><td><strong>${num}</strong></td><td>${cheval.nom || cheval.name || '—'}</td><td>${cote}</td><td>${pos}</td><td>${medal}</td></tr>`;
     }
     
     html += '</tbody></table></div>';
-    html += '<div style="background:var(--accent-light);border:1px solid #bfdbfe;border-radius:var(--radius);padding:1rem;margin-top:1rem;color:var(--accent-text);font-size:13px">ℹ️ Tableau des chevaux avec leurs côtes et analyse musicale. Utilisez cette vue pour analyser vos pronos.</div>';
     
     cont.innerHTML = html;
   } catch(e) {
@@ -1536,27 +1548,31 @@ async function renderMusiqueComparison() {
     
     // Colonne 1: Top 4 chevaux
     html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🎵 Top 4 Chevaux (Musique)</div>';
-    html += '<div class="tbl-wrap"><table><thead><tr><th>Rang</th><th>N°</th><th>Cheval</th><th>Cote</th></tr></thead><tbody>';
+    html += '<div class="tbl-wrap"><table><thead><tr><th>Rang</th><th>N°</th><th>Cheval</th><th>Au Podium?</th></tr></thead><tbody>';
     
     for (let i = 0; i < top4.length; i++) {
       const cheval = top4[i];
       const num = i + 1;
-      const cote = cheval.coteP || cheval.cote || '—';
-      html += `<tr><td><strong>${i+1}</strong></td><td>${num}</td><td>${cheval.nom || cheval.name || '—'}</td><td>${cote}</td></tr>`;
+      const isPodium = (arrivee && arrivee.slice(0, 3).includes(num)) ? '✅ Oui' : '❌ Non';
+      html += `<tr><td><strong>${i+1}</strong></td><td>${num}</td><td>${cheval.nom || cheval.name || '—'}</td><td>${isPodium}</td></tr>`;
     }
     
     html += '</tbody></table></div></div>';
     
-    // Colonne 2: Tous les chevaux
-    html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">📋 Tous les Chevaux</div>';
-    html += '<div class="tbl-wrap" style="max-height:300px;overflow-y:auto"><table><thead><tr><th>N°</th><th>Cheval</th><th>Cote</th></tr></thead><tbody>';
+    // Colonne 2: Podium réel
+    html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🏁 Podium Réel</div>';
+    html += '<div class="tbl-wrap"><table><thead><tr><th>Médaille</th><th>N°</th><th>Cheval</th><th>Top 4?</th></tr></thead><tbody>';
     
-    for (let i = 0; i < participants.length; i++) {
-      const cheval = participants[i];
-      const num = i + 1;
-      const cote = cheval.coteP || cheval.cote || '—';
-      const isTop = top4.some((c, idx) => idx === i) ? 'background:#d1fae5' : '';
-      html += `<tr style="${isTop}"><td><strong>${num}</strong></td><td>${cheval.nom || cheval.name || '—'}</td><td>${cote}</td></tr>`;
+    if (arrivee && arrivee.length > 0) {
+      for (let i = 0; i < 3 && i < arrivee.length; i++) {
+        const num = arrivee[i];
+        const cheval = participants.find((c, idx) => idx + 1 === num);
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+        const inTop = top4.some((c, idx) => idx + 1 === num) ? '✅ Oui' : '❌ Non';
+        html += `<tr><td>${medal}</td><td>${num}</td><td>${cheval?.nom || cheval?.name || '—'}</td><td>${inTop}</td></tr>`;
+      }
+    } else {
+      html += `<tr><td colspan="4" style="text-align:center;color:var(--text3)">Course en cours...</td></tr>`;
     }
     
     html += '</tbody></table></div></div></div>';
