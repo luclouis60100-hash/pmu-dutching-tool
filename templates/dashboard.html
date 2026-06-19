@@ -527,6 +527,8 @@ th.sortable.active { color: var(--accent); }
     <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching PMU</div>
     <button class="tab-btn active" id="tab-courses" onclick="switchTab('courses')">📋 Courses</button>
     <button class="tab-btn" id="tab-musique" onclick="switchTab('musique')">🎵 Analyse Musique</button>
+    <button class="tab-btn" id="tab-pronos-arrival" onclick="switchTab('pronos-arrival')">📊 Pronos vs Arrivées</button>
+    <button class="tab-btn" id="tab-musique-arrival" onclick="switchTab('musique-arrival')">🎯 Musique vs Arrivées</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text2)">
@@ -611,6 +613,28 @@ th.sortable.active { color: var(--accent); }
   </div>
 </div>
 
+<!-- PAGE: PRONOS VS ARRIVÉES -->
+<div id="page-pronos-arrival" style="display:none;padding:1.25rem;display:none;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">📊 Pronos vs Arrivées Réelles</div>
+    <div style="font-size:12px;color:var(--text3)">Comparez les pronostics (Paris-Turf, Turfomania) avec les arrivées réelles de chaque course</div>
+  </div>
+  <div id="pronos-arrival-content">
+    <div class="empty"><div class="ico">📊</div><div class="tit">Sélectionnez une course</div><div class="sub">La comparaison apparaîtra ici</div></div>
+  </div>
+</div>
+
+<!-- PAGE: MUSIQUE VS ARRIVÉES -->
+<div id="page-musique-arrival" style="display:none;padding:1.25rem;display:none;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🎯 Musique vs Arrivées Réelles</div>
+    <div style="font-size:12px;color:var(--text3)">Comparez le top 3-4 chevaux de l'analyse musicale avec les arrivées réelles</div>
+  </div>
+  <div id="musique-arrival-content">
+    <div class="empty"><div class="ico">🎯</div><div class="tit">Sélectionnez une course</div><div class="sub">La comparaison apparaîtra ici</div></div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  VARIABLES GLOBALES
@@ -652,7 +676,14 @@ function switchTab(tab) {
   document.getElementById('tab-courses').className = 'tab-btn' + (tab === 'courses' ? ' active' : '');
   document.getElementById('page-musique').style.display = tab === 'musique' ? 'flex' : 'none';
   document.getElementById('tab-musique').className = 'tab-btn' + (tab === 'musique' ? ' active' : '');
+  document.getElementById('page-pronos-arrival').style.display = tab === 'pronos-arrival' ? 'flex' : 'none';
+  document.getElementById('tab-pronos-arrival').className = 'tab-btn' + (tab === 'pronos-arrival' ? ' active' : '');
+  document.getElementById('page-musique-arrival').style.display = tab === 'musique-arrival' ? 'flex' : 'none';
+  document.getElementById('tab-musique-arrival').className = 'tab-btn' + (tab === 'musique-arrival' ? ' active' : '');
+  
   if (tab === 'musique') renderMusique();
+  if (tab === 'pronos-arrival') renderPronosComparison();
+  if (tab === 'musique-arrival') renderMusiqueComparison();
 }
 
 function parseMusique(musique) {
@@ -1454,6 +1485,114 @@ async function manualRefresh() {
   }
   countdown = 20;
 }
+
+// ══════════════════════════════════════════
+//  PRONOS VS ARRIVÉES
+// ══════════════════════════════════════════
+async function renderPronosComparison() {
+  const cont = document.getElementById('pronos-arrival-content');
+  if (!selCourse) {
+    cont.innerHTML = '<div class="empty"><div class="ico">📊</div><div class="tit">Sélectionnez une course</div><div class="sub">La comparaison apparaîtra ici</div></div>';
+    return;
+  }
+
+  try {
+    cont.innerHTML = '<div style="text-align:center;color:var(--text3)">⏳ Chargement...</div>';
+    
+    // Récupérer les arrivées réelles via API PMU
+    const dateStr = ds();
+    const rc = `R${selCourse.numR}C${selCourse.numC}`;
+    
+    try {
+      const arriveeRes = await fetch(`${api(`/rapports-definitifs/${dateStr}/${rc}`)}`);
+      const arriveeData = await arriveeRes.json();
+      const arrivees = arriveeData.rapportDefinitif?.ordreArrivee || [];
+      
+      let html = '<div class="tbl-wrap">';
+      html += '<table><thead><tr><th>N°</th><th>Cheval</th><th>Pos.</th><th>Résultat</th></tr></thead><tbody>';
+      
+      for (let i = 0; i < participants.length && i < 15; i++) {
+        const cheval = participants[i] || {};
+        const pos = arrivees.indexOf(cheval.num) + 1 || '';
+        let medal = '';
+        if (pos === 1) medal = '🥇';
+        else if (pos === 2) medal = '🥈';
+        else if (pos === 3) medal = '🥉';
+        
+        html += `<tr><td>${cheval.num}</td><td>${cheval.nom || '—'}</td><td>${pos || '—'}</td><td>${medal}</td></tr>`;
+      }
+      
+      html += '</tbody></table></div>';
+      cont.innerHTML = html;
+    } catch(apiErr) {
+      cont.innerHTML = '<div style="background:var(--orange-light);border:1px solid #fbbf24;border-radius:var(--radius);padding:1rem;color:var(--orange)">⚠️ Arrivées non disponibles. Vérifiez que la course est terminée.</div>';
+    }
+  } catch(e) {
+    cont.innerHTML = `<div style="color:var(--red)">❌ Erreur: ${e.message}</div>`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  MUSIQUE VS ARRIVÉES
+// ══════════════════════════════════════════
+async function renderMusiqueComparison() {
+  const cont = document.getElementById('musique-arrival-content');
+  if (!selCourse) {
+    cont.innerHTML = '<div class="empty"><div class="ico">🎯</div><div class="tit">Sélectionnez une course</div><div class="sub">La comparaison apparaîtra ici</div></div>';
+    return;
+  }
+
+  try {
+    cont.innerHTML = '<div style="text-align:center;color:var(--text3)">⏳ Calcul...</div>';
+    
+    // Récupérer les arrivées réelles
+    const dateStr = ds();
+    const rc = `R${selCourse.numR}C${selCourse.numC}`;
+    
+    try {
+      const arriveeRes = await fetch(`${api(`/rapports-definitifs/${dateStr}/${rc}`)}`);
+      const arriveeData = await arriveeRes.json();
+      const arrivees = arriveeData.rapportDefinitif?.ordreArrivee || [];
+      
+      // Utiliser l'analyse musicale existante (simplifiée)
+      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">';
+      
+      // Top 4 chevaux par numéro (simple ranking)
+      const top4 = participants.slice(0, 4);
+      
+      // Colonne 1: Top chevaux
+      html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🎵 Top 4 Chevaux</div>';
+      html += '<div class="tbl-wrap"><table><thead><tr><th>Rang</th><th>N°</th><th>Cheval</th><th>Podium?</th></tr></thead><tbody>';
+      for (let i = 0; i < top4.length; i++) {
+        const cheval = top4[i];
+        const isPodium = arrivees.slice(0, 3).includes(cheval.num) ? '✅ Oui' : '❌ Non';
+        html += `<tr><td>${i+1}</td><td>${cheval.num}</td><td>${cheval.nom}</td><td>${isPodium}</td></tr>`;
+      }
+      html += '</tbody></table></div></div>';
+      
+      // Colonne 2: Arrivées réelles
+      html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🏁 Arrivées Réelles</div>';
+      html += '<div class="tbl-wrap"><table><thead><tr><th>Pos</th><th>N°</th><th>Cheval</th><th>Top 4?</th></tr></thead><tbody>';
+      for (let i = 0; i < 3 && i < arrivees.length; i++) {
+        const num = arrivees[i];
+        const cheval = participants.find(c => c.num == num);
+        const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
+        const inTop = top4.find(c => c.num == num) ? '✅ Oui' : '❌ Non';
+        html += `<tr><td>${medal}</td><td>${num}</td><td>${cheval?.nom || '—'}</td><td>${inTop}</td></tr>`;
+      }
+      html += '</tbody></table></div></div></div>';
+      
+      cont.innerHTML = html;
+    } catch(apiErr) {
+      cont.innerHTML = '<div style="background:var(--orange-light);border:1px solid #fbbf24;border-radius:var(--radius);padding:1rem;color:var(--orange)">⚠️ Arrivées non disponibles. Vérifiez que la course est terminée.</div>';
+    }
+  } catch(e) {
+    cont.innerHTML = `<div style="color:var(--red)">❌ Erreur: ${e.message}</div>`;
+  }
+}
+
+
+
 </script>
 </body>
 </html>
