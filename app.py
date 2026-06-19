@@ -380,7 +380,11 @@ def success():
     try:
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         user_id = session['user_id']
-        email = session['email']
+        
+        # Récupérer l'utilisateur depuis la DB pour avoir l'email
+        user = User.query.get(user_id)
+        if not user:
+            return redirect(url_for('dashboard'))
         
         access_expires = datetime.now() + timedelta(days=30)
         
@@ -395,7 +399,7 @@ def success():
         try:
             msg = Message(
                 subject='✅ Bienvenue à Dutching Turf Premium !',
-                recipients=[email],
+                recipients=[user.email],
                 body=f"""Bonjour,
 
 Merci pour votre abonnement à Dutching Turf Premium ! 🎉
@@ -446,7 +450,7 @@ Dutching Turf Team
                 """
             )
             mail.send(msg)
-            print(f"[EMAIL] Confirmation envoyée à {email}")
+            print(f"[EMAIL] Confirmation envoyée à {user.email}")
         except Exception as email_err:
             print(f"[EMAIL ERROR] {str(email_err)}")
         
