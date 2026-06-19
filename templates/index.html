@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dutching Turf - L'outil PMU intelligent</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        /* Navigation */
+        nav {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+
+        .logo-img {
+            height: 60px;
+            width: auto;
+        }
+
+        .logo-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .logo-main {
+            font-size: 1.4rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1e3c72, #2a9d5c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-sub {
+            font-size: 0.75rem;
+            color: #ff9500;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn-nav {
+            padding: 0.7rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .btn-login {
+            background: white;
+            color: #1e3c72;
+            border: 2px solid #1e3c72;
+        }
+
+        .btn-login:hover {
+            background: #1e3c72;
+            color: white;
+        }
+
+        .btn-signup {
+            background: linear-gradient(135deg, #2a9d5c, #ff9500);
+            color: white;
+        }
+
+        .btn-signup:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(42, 157, 92, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 2rem;
+            text-align: center;
+            color: white;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+
+        .hero-content h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero-content p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+            line-height: 1.6;
+        }
+
+        .hero-logo {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .hero-logo img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .btn-hero {
+            padding: 1rem 2.5rem;
+            font-size: 1.1rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 700;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #1e3c72;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #1e3c72;
+        }
+
+        /* Features Section */
+        .features {
+            background: white;
+            padding: 4rem 2rem;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            font-size: 2.5rem;
+            text-align: center;
+            margin-bottom: 3rem;
+            background: linear-gradient(135deg, #1e3c72, #2a9d5c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: linear-gradient(135deg, #f8fafb 0%, #f0f6ff 100%);
+            padding: 2rem;
+            border-radius: 1rem;
+            border-left: 4px solid #2a9d5c;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(42, 157, 92, 0.15);
+        }
+
+        .feature-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            color: #1e3c72;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-card p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Pricing Section */
+        .pricing {
+            background: linear-gradient(135deg, #f5f7ff 0%, #f0f4ff 100%);
+            padding: 4rem 2rem;
+        }
+
+        .pricing-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .pricing-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 2.5rem;
+            text-align: center;
+            max-width: 450px;
+            margin: 0 auto;
+            box-shadow: 0 10px 40px rgba(42, 157, 92, 0.15);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card:hover {
+            border-color: #2a9d5c;
+            transform: translateY(-5px);
+        }
+
+        .pricing-card h3 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: #1e3c72;
+        }
+
+        .price {
+            font-size: 3.5rem;
+            background: linear-gradient(135deg, #2a9d5c, #ff9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            margin: 1rem 0;
+        }
+
+        .price-period {
+            color: #999;
+            font-size: 1rem;
+        }
+
+        .pricing-features {
+            text-align: left;
+            margin: 2rem 0;
+            list-style: none;
+        }
+
+        .pricing-features li {
+            padding: 0.8rem 0;
+            color: #666;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .pricing-features li:before {
+            content: "✓";
+            background: linear-gradient(135deg, #2a9d5c, #ff9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+
+        .btn-subscribe {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(135deg, #2a9d5c, #ff9500);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 2rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-subscribe:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(42, 157, 92, 0.4);
+        }
+
+        /* Stats Section */
+        .stats {
+            background: white;
+            padding: 3rem 2rem;
+            border-top: 1px solid #eee;
+        }
+
+        .stats-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            text-align: center;
+        }
+
+        .stat {
+            padding: 1rem;
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #2a9d5c, #ff9500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 700;
+        }
+
+        .stat-label {
+            color: #999;
+            margin-top: 0.5rem;
+        }
+
+        /* Footer */
+        footer {
+            background: #1a2d4d;
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .hero {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .hero-buttons {
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2rem;
+            }
+
+            .hero p {
+                font-size: 1rem;
+            }
+
+            nav {
+                flex-wrap: wrap;
+                gap: 1rem;
+            }
+
+            .nav-buttons {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .btn-nav {
+                width: 100%;
+            }
+
+            .logo-img {
+                height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <div class="logo-container" onclick="window.location.href='/'">
+            <img src="/static/logo-white.png" alt="Dutching Turf Logo" class="logo-img">
+            <div class="logo-text">
+                <div class="logo-main">DUTCHING TURF</div>
+                <div class="logo-sub">L'OUTIL PMU INTELLIGENT</div>
+            </div>
+        </div>
+        <div class="nav-buttons">
+            <button class="btn-nav btn-login" onclick="window.location.href='/login'">Se connecter</button>
+            <button class="btn-nav btn-signup" onclick="window.location.href='/signup'">S'inscrire</button>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="hero">
+        <div class="hero-content">
+            <h1>Analysez vos paris PMU 🎯</h1>
+            <p>Le tableau d'analyse le plus complet pour optimiser vos mises au PMU. Dutching intelligent, pronos experts et records en temps réel.</p>
+            <div class="hero-buttons">
+                <button class="btn-hero btn-primary" onclick="document.querySelector('.pricing').scrollIntoView({behavior: 'smooth'})">Voir les tarifs</button>
+                <button class="btn-hero btn-secondary" onclick="window.location.href='/signup'">Commencer maintenant</button>
+            </div>
+        </div>
+        <div class="hero-logo">
+            <img src="/static/logo-blue.png" alt="Dutching Turf - L'outil PMU intelligent">
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <div class="features">
+        <div class="features-container">
+            <h2 class="section-title">Fonctionnalités du tableau</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Dutching Complet</h3>
+                    <p>Calculez vos mises de dutching pour chaque course avec des cotes en temps réel du PMU</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🎯</div>
+                    <h3>Pronos Paris-Turf</h3>
+                    <p>Accédez aux pronostics des experts de Paris-Turf directement dans le tableau</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⏱️</div>
+                    <h3>Records km</h3>
+                    <p>Consultez les records de distance pour chaque cheval afin d'analyser leurs performances</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔄</div>
+                    <h3>Données en Temps Réel</h3>
+                    <p>Les cotes, réunions et chevaux se mettent à jour automatiquement</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📱</div>
+                    <h3>Interface Intuitive</h3>
+                    <p>Un design simple et efficace pour analyser rapidement vos courses</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <h3>Compte Sécurisé</h3>
+                    <p>Vos données sont protégées avec un système d'authentification sécurisé</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pricing Section -->
+    <div class="pricing" id="pricing">
+        <div class="pricing-container">
+            <h2 class="section-title">Tarifs simples et transparents</h2>
+            <div class="pricing-card">
+                <h3>Plan Premium</h3>
+                <div class="price">
+                    9,99€
+                    <div class="price-period">/mois</div>
+                </div>
+                <ul class="pricing-features">
+                    <li>Accès complet au tableau</li>
+                    <li>Dutching avec cotes PMU</li>
+                    <li>Pronos Paris-Turf</li>
+                    <li>Records km des chevaux</li>
+                    <li>Données temps réel</li>
+                    <li>Support prioritaire</li>
+                </ul>
+                <button class="btn-subscribe" onclick="window.location.href='/signup'">S'abonner maintenant</button>
+                <p style="margin-top: 1rem; color: #999; font-size: 0.9rem;">Abonnement valable 30 jours</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Section -->
+    <div class="stats">
+        <div class="stats-container">
+            <div class="stat">
+                <div class="stat-number">500+</div>
+                <div class="stat-label">Utilisateurs actifs</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">50K+</div>
+                <div class="stat-label">Courses analysées</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">24/7</div>
+                <div class="stat-label">Données en direct</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">4.9/5</div>
+                <div class="stat-label">Satisfaction</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p>&copy; 2026 Dutching Turf. Tous droits réservés. | L'outil PMU intelligent</p>
+    </footer>
+</body>
+</html>

@@ -19,7 +19,7 @@ except ImportError:
     SCRAPER_AVAILABLE = False
 
 # Configuration
-app = Flask(__name__)
+app = Flask(__name__, static_folder='templates/static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'pmu-dutching-tool-secret-key-change-me')
 
 # Stripe configuration
@@ -35,16 +35,15 @@ DB_FILE = 'pmu_users.db'
 
 def get_db_connection():
     """Get database connection with timeout"""
-    conn = sqlite3.connect(DB_FILE, timeout=10.0)  # 10 second timeout
-    conn.isolation_level = None  # Autocommit mode to avoid locks
+    conn = sqlite3.connect(DB_FILE, timeout=10.0)
+    conn.isolation_level = None
     return conn
 
 def init_db():
-    """Initialize database with users and subscriptions tables"""
+    """Initialize database"""
     conn = get_db_connection()
     c = conn.cursor()
     
-    # Users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -54,7 +53,6 @@ def init_db():
         )
     ''')
     
-    # Subscriptions table
     c.execute('''
         CREATE TABLE IF NOT EXISTS subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +79,7 @@ def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('pricing'))
+            return redirect(url_for('index'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -89,7 +87,7 @@ def premium_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('pricing'))
+            return redirect(url_for('index'))
         
         user_id = session['user_id']
         try:
@@ -99,7 +97,6 @@ def premium_required(f):
             result = c.fetchone()
             conn.close()
             
-            # Si pas de subscription ou expirée, redirection
             if not result or result[0] is None:
                 return redirect(url_for('pricing'))
             
@@ -114,14 +111,34 @@ def premium_required(f):
     return decorated_function
 
 # ============================================
-# AUTH ROUTES
+# ROUTES - INDEX & LANDING PAGE
 # ============================================
 
 @app.route('/')
 def index():
     if 'user_id' in session:
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('pricing'))
+        user_id = session['user_id']
+        try:
+            conn = get_db_connection()
+            c = conn.cursor()
+            c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+            result = c.fetchone()
+            conn.close()
+            
+            if result and result[0]:
+                expires_at = datetime.fromisoformat(result[0])
+                if datetime.now() < expires_at:
+                    return redirect(url_for('dashboard'))
+        except:
+            pass
+        
+        return redirect(url_for('pricing'))
+    
+    return render_template('index.html')
+
+# ============================================
+# AUTH ROUTES
+# ============================================
 
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
@@ -144,11 +161,9 @@ def signup():
             conn = get_db_connection()
             c = conn.cursor()
             
-            # Create user
             c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
             user_id = c.lastrowid
             
-            # Create subscription (empty, user must pay)
             c.execute('''
                 INSERT INTO subscriptions (user_id, access_expires_at) 
                 VALUES (?, ?)
@@ -186,7 +201,23 @@ def login():
             if user:
                 session['user_id'] = user[0]
                 session['email'] = user[1]
-                return redirect(url_for('dashboard'))
+                
+                # Vérifier si abonnement valide
+                try:
+                    conn = get_db_connection()
+                    c = conn.cursor()
+                    c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user[0],))
+                    result = c.fetchone()
+                    conn.close()
+                    
+                    if result and result[0]:
+                        expires_at = datetime.fromisoformat(result[0])
+                        if datetime.now() < expires_at:
+                            return redirect(url_for('dashboard'))
+                except:
+                    pass
+                
+                return redirect(url_for('pricing'))
         except Exception as e:
             print(f"[LOGIN ERROR] {str(e)}")
         
@@ -197,7 +228,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('pricing'))
+    return redirect(url_for('index'))
 
 # ============================================
 # MAIN ROUTES
@@ -206,7 +237,6 @@ def logout():
 @app.route('/pricing')
 def pricing():
     if 'user_id' in session:
-        # Vérifier si l'utilisateur a accès premium
         user_id = session['user_id']
         try:
             conn = get_db_connection()
@@ -243,7 +273,6 @@ def create_checkout_session():
         print(f"[DEBUG] Creating checkout for user {user_id} ({email})")
         print(f"[DEBUG] Stripe API Key loaded: {stripe.api_key is not None and stripe.api_key != 'sk_test_your_key_here'}")
         
-        # Create or get Stripe customer
         try:
             conn = get_db_connection()
             c = conn.cursor()
@@ -254,7 +283,6 @@ def create_checkout_session():
                 customer_id = result[0]
                 print(f"[DEBUG] Using existing customer: {customer_id}")
             else:
-                # Create new customer
                 print(f"[DEBUG] Creating new Stripe customer")
                 customer = stripe.Customer.create(email=email)
                 customer_id = customer.id
@@ -268,7 +296,6 @@ def create_checkout_session():
             print(f"[DB ERROR] {str(db_err)}")
             raise
         
-        # Create checkout session - Mode PAYMENT (one-time)
         print(f"[DEBUG] Creating checkout session with mode=payment")
         checkout_session = stripe.checkout.Session.create(
             customer=customer_id,
@@ -277,7 +304,7 @@ def create_checkout_session():
                 'price_data': {
                     'currency': 'eur',
                     'product_data': {
-                        'name': 'PMUDutchingTool Premium - 1 Mois',
+                        'name': 'Dutching Turf Premium - 1 Mois',
                         'description': 'Accès complet au tableau d\'analyse PMU'
                     },
                     'unit_amount': 999,
@@ -311,7 +338,6 @@ def success():
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         user_id = session['user_id']
         
-        # Update subscription in database - 30 days access
         access_expires = datetime.now() + timedelta(days=30)
         
         conn = get_db_connection()
@@ -334,6 +360,44 @@ def success():
         import traceback
         traceback.print_exc()
         return redirect(url_for('dashboard'))
+
+# ============================================
+# API ROUTES - SUBSCRIPTION INFO
+# ============================================
+
+@app.route('/api/subscription-info')
+@login_required
+def subscription_info():
+    """Retourne les infos d'abonnement de l'utilisateur"""
+    user_id = session['user_id']
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+        result = c.fetchone()
+        conn.close()
+        
+        if result and result[0]:
+            expires_at = datetime.fromisoformat(result[0])
+            days_left = (expires_at - datetime.now()).days
+            
+            return jsonify({
+                'has_subscription': True,
+                'expires_at': expires_at.strftime('%d/%m/%Y'),
+                'expires_at_iso': expires_at.isoformat(),
+                'days_left': max(0, days_left),
+                'is_valid': datetime.now() < expires_at
+            })
+        else:
+            return jsonify({
+                'has_subscription': False,
+                'expires_at': None,
+                'days_left': 0,
+                'is_valid': False
+            })
+    except Exception as e:
+        print(f"[ERROR] subscription_info: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================
 # API ROUTES - PMU DATA (PREMIUM ONLY)
@@ -423,7 +487,6 @@ def records_km(date_str, rc):
         
         num_r, num_c = int(m.group(1)), int(m.group(2))
         
-        # Parser les noms des chevaux depuis query string
         horse_names = {}
         for key, value in request.args.items():
             try:
@@ -466,7 +529,7 @@ def turfomania_pronos(date_str, rc):
 def health():
     return jsonify({
         'status': 'ok',
-        'app': 'PMUDutchingTool',
+        'app': 'Dutching Turf',
         'timestamp': datetime.now().isoformat(),
         'scraper': SCRAPER_AVAILABLE
     })
