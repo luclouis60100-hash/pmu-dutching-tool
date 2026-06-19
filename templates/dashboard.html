@@ -617,7 +617,7 @@ th.sortable.active { color: var(--accent); }
 <div id="page-pronos-arrival" style="display:none;padding:1.25rem;display:none;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">📊 Pronos vs Arrivées Réelles</div>
-    <div style="font-size:12px;color:var(--text3)">Comparez les pronostics (Paris-Turf, Turfomania) avec les arrivées réelles de chaque course</div>
+    <div style="font-size:12px;color:var(--text3)">Comparez les pronostics avec les arrivées réelles de chaque course</div>
   </div>
   <div id="pronos-arrival-content">
     <div class="empty"><div class="ico">📊</div><div class="tit">Sélectionnez une course</div><div class="sub">La comparaison apparaîtra ici</div></div>
@@ -1509,17 +1509,19 @@ async function renderPronosComparison() {
       const arrivees = arriveeData.rapportDefinitif?.ordreArrivee || [];
       
       let html = '<div class="tbl-wrap">';
-      html += '<table><thead><tr><th>N°</th><th>Cheval</th><th>Pos.</th><th>Résultat</th></tr></thead><tbody>';
+      html += '<table><thead><tr><th>N°</th><th>Cheval</th><th>Position</th><th>Résultat</th></tr></thead><tbody>';
       
       for (let i = 0; i < participants.length && i < 15; i++) {
         const cheval = participants[i] || {};
-        const pos = arrivees.indexOf(cheval.num) + 1 || '';
+        const num = i + 1;  // Numéro du cheval
+        const pos = arrivees.indexOf(cheval.num || num) + 1 || '—';
         let medal = '';
-        if (pos === 1) medal = '🥇';
-        else if (pos === 2) medal = '🥈';
-        else if (pos === 3) medal = '🥉';
+        if (pos === 1) medal = '🥇 1er';
+        else if (pos === 2) medal = '🥈 2e';
+        else if (pos === 3) medal = '🥉 3e';
+        else if (pos !== '—') medal = `${pos}e`;
         
-        html += `<tr><td>${cheval.num}</td><td>${cheval.nom || '—'}</td><td>${pos || '—'}</td><td>${medal}</td></tr>`;
+        html += `<tr><td><strong>${num}</strong></td><td>${cheval.nom || cheval.name || '—'}</td><td>${pos}</td><td>${medal}</td></tr>`;
       }
       
       html += '</tbody></table></div>';
@@ -1554,34 +1556,36 @@ async function renderMusiqueComparison() {
       const arriveeData = await arriveeRes.json();
       const arrivees = arriveeData.rapportDefinitif?.ordreArrivee || [];
       
-      // Utiliser l'analyse musicale existante (simplifiée)
-      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">';
-      
-      // Top 4 chevaux par numéro (simple ranking)
+      // Top 4 premiers chevaux du tableau
       const top4 = participants.slice(0, 4);
       
-      // Colonne 1: Top chevaux
+      // Colonne 1: Top 4 chevaux
+      let html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">';
       html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🎵 Top 4 Chevaux</div>';
-      html += '<div class="tbl-wrap"><table><thead><tr><th>Rang</th><th>N°</th><th>Cheval</th><th>Podium?</th></tr></thead><tbody>';
+      html += '<div class="tbl-wrap"><table><thead><tr><th>Rang</th><th>N°</th><th>Cheval</th><th>Au Podium?</th></tr></thead><tbody>';
+      
       for (let i = 0; i < top4.length; i++) {
         const cheval = top4[i];
-        const isPodium = arrivees.slice(0, 3).includes(cheval.num) ? '✅ Oui' : '❌ Non';
-        html += `<tr><td>${i+1}</td><td>${cheval.num}</td><td>${cheval.nom}</td><td>${isPodium}</td></tr>`;
+        const num = i + 1;
+        const isPodium = arrivees.slice(0, 3).includes(cheval.num || num) ? '✅ Oui' : '❌ Non';
+        html += `<tr><td><strong>${i+1}</strong></td><td>${num}</td><td>${cheval.nom || cheval.name || '—'}</td><td>${isPodium}</td></tr>`;
       }
+      
       html += '</tbody></table></div></div>';
       
       // Colonne 2: Arrivées réelles
-      html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🏁 Arrivées Réelles</div>';
-      html += '<div class="tbl-wrap"><table><thead><tr><th>Pos</th><th>N°</th><th>Cheval</th><th>Top 4?</th></tr></thead><tbody>';
+      html += '<div><div style="font-weight:600;margin-bottom:10px;color:var(--text)">🏁 Arrivées Réelles (Top 3)</div>';
+      html += '<div class="tbl-wrap"><table><thead><tr><th>Médaille</th><th>N°</th><th>Cheval</th><th>Dans Top 4?</th></tr></thead><tbody>';
+      
       for (let i = 0; i < 3 && i < arrivees.length; i++) {
         const num = arrivees[i];
-        const cheval = participants.find(c => c.num == num);
+        const cheval = participants.find((c, idx) => (c.num || idx+1) === num);
         const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : '🥉';
-        const inTop = top4.find(c => c.num == num) ? '✅ Oui' : '❌ Non';
-        html += `<tr><td>${medal}</td><td>${num}</td><td>${cheval?.nom || '—'}</td><td>${inTop}</td></tr>`;
+        const inTop = top4.some((c, idx) => (c.num || idx+1) === num) ? '✅ Oui' : '❌ Non';
+        html += `<tr><td>${medal}</td><td>${num}</td><td>${cheval?.nom || cheval?.name || '—'}</td><td>${inTop}</td></tr>`;
       }
-      html += '</tbody></table></div></div></div>';
       
+      html += '</tbody></table></div></div></div>';
       cont.innerHTML = html;
     } catch(apiErr) {
       cont.innerHTML = '<div style="background:var(--orange-light);border:1px solid #fbbf24;border-radius:var(--radius);padding:1rem;color:var(--orange)">⚠️ Arrivées non disponibles. Vérifiez que la course est terminée.</div>';
