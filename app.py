@@ -2,15 +2,14 @@ from dotenv import load_dotenv
 load_dotenv()
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import os
-import json
-from pymongo import MongoClient
-from pymongo.errors import DuplicateKeyError
+from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import func
 import stripe
 import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
 import hashlib
-from bson.objectid import ObjectId
+import json
 
 # Scraping imports
 try:
@@ -24,43 +23,63 @@ except ImportError:
 app = Flask(__name__, static_folder='templates/static', static_url_path='/static')
 app.secret_key = os.environ.get('SECRET_KEY', 'pmu-dutching-tool-secret-key-change-me')
 
+# Database configuration
+DATABASE_URL = os.environ.get('DATABASE_URL')
+if DATABASE_URL:
+    # Fix Neon SQLAlchemy URL format
+    if DATABASE_URL.startswith('postgresql://'):
+        DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///pmu_dutching.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
 # Stripe configuration
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_your_key_here')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_your_key_here')
 
-# MongoDB configuration
-MONGODB_URL = os.environ.get('MONGODB_URI')
-
 # ============================================
-# DATABASE HELPERS - MongoDB
+# DATABASE MODELS
 # ============================================
 
-def get_db():
-    """Get MongoDB connection"""
-    if not MONGODB_URL:
-        raise Exception("MONGODB_URI environment variable not set!")
+class User(db.Model):
+    __tablename__ = 'users'
     
-    client = MongoClient(MONGODB_URL)
-    db = client['pmu_dutching']
-    return db
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    
+    subscription = db.relationship('Subscription', backref='user', uselist=False, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<User {self.email}>'
+
+class Subscription(db.Model):
+    __tablename__ = 'subscriptions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
+    stripe_customer_id = db.Column(db.String(120))
+    stripe_subscription_id = db.Column(db.String(120))
+    access_expires_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def __repr__(self):
+        return f'<Subscription user_id={self.user_id}>'
+
+# ============================================
+# CREATE TABLES
+# ============================================
 
 def init_db():
-    """Initialize MongoDB collections and indexes"""
+    """Initialize database tables"""
     try:
-        db = get_db()
-        
-        # Create collections if they don't exist
-        if 'users' not in db.list_collection_names():
-            db.create_collection('users')
-        
-        if 'subscriptions' not in db.list_collection_names():
-            db.create_collection('subscriptions')
-        
-        # Create indexes
-        db.users.create_index('email', unique=True)
-        db.subscriptions.create_index('user_id')
-        
-        print("[DB] MongoDB initialized successfully")
+        with app.app_context():
+            db.create_all()
+            print("[DB] PostgreSQL initialized successfully")
     except Exception as e:
         print(f"[ERROR] Database initialization: {str(e)}")
 
@@ -86,14 +105,12 @@ def premium_required(f):
         
         user_id = session['user_id']
         try:
-            db = get_db()
-            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
+            subscription = Subscription.query.filter_by(user_id=user_id).first()
             
-            if not subscription or subscription.get('access_expires_at') is None:
+            if not subscription or subscription.access_expires_at is None:
                 return redirect(url_for('pricing'))
             
-            expires_at = subscription['access_expires_at']
-            if datetime.now() > expires_at:
+            if datetime.now() > subscription.access_expires_at:
                 return redirect(url_for('pricing'))
         except Exception as e:
             print(f"[DB ERROR] {str(e)}")
@@ -111,12 +128,10 @@ def index():
     if 'user_id' in session:
         user_id = session['user_id']
         try:
-            db = get_db()
-            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
+            subscription = Subscription.query.filter_by(user_id=user_id).first()
             
-            if subscription and subscription.get('access_expires_at'):
-                expires_at = subscription['access_expires_at']
-                if datetime.now() < expires_at:
+            if subscription and subscription.access_expires_at:
+                if datetime.now() < subscription.access_expires_at:
                     return redirect(url_for('dashboard'))
         except:
             pass
@@ -146,34 +161,30 @@ def signup():
             return render_template('signup.html', error='Le mot de passe doit faire au moins 6 caractères')
         
         try:
-            hashed_password = hashlib.sha256(password.encode()).hexdigest()
-            db = get_db()
+            # Check if user exists
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user:
+                return render_template('signup.html', error='Cet email est déjà inscrit')
             
-            # Insert user
-            user_result = db.users.insert_one({
-                'email': email,
-                'password': hashed_password,
-                'created_at': datetime.now()
-            })
-            user_id = user_result.inserted_id
+            hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            
+            # Create user
+            new_user = User(email=email, password=hashed_password)
+            db.session.add(new_user)
+            db.session.flush()  # Get the ID without committing
             
             # Create subscription
-            db.subscriptions.insert_one({
-                'user_id': user_id,
-                'stripe_customer_id': None,
-                'stripe_subscription_id': None,
-                'access_expires_at': None,
-                'created_at': datetime.now(),
-                'updated_at': datetime.now()
-            })
+            new_subscription = Subscription(user_id=new_user.id)
+            db.session.add(new_subscription)
             
-            session['user_id'] = str(user_id)
-            session['email'] = email
+            db.session.commit()
+            
+            session['user_id'] = new_user.id
+            session['email'] = new_user.email
             return redirect(url_for('pricing'))
             
-        except DuplicateKeyError:
-            return render_template('signup.html', error='Cet email est déjà inscrit')
         except Exception as e:
+            db.session.rollback()
             print(f"[SIGNUP ERROR] {str(e)}")
             return render_template('signup.html', error=f'Erreur: {str(e)}')
     
@@ -187,20 +198,18 @@ def login():
         
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         try:
-            db = get_db()
-            user = db.users.find_one({'email': email, 'password': hashed_password})
+            user = User.query.filter_by(email=email, password=hashed_password).first()
             
             if user:
-                session['user_id'] = str(user['_id'])
-                session['email'] = user['email']
+                session['user_id'] = user.id
+                session['email'] = user.email
                 
                 # Vérifier si abonnement valide
                 try:
-                    subscription = db.subscriptions.find_one({'user_id': user['_id']})
+                    subscription = Subscription.query.filter_by(user_id=user.id).first()
                     
-                    if subscription and subscription.get('access_expires_at'):
-                        expires_at = subscription['access_expires_at']
-                        if datetime.now() < expires_at:
+                    if subscription and subscription.access_expires_at:
+                        if datetime.now() < subscription.access_expires_at:
                             return redirect(url_for('dashboard'))
                 except:
                     pass
@@ -227,12 +236,10 @@ def pricing():
     if 'user_id' in session:
         user_id = session['user_id']
         try:
-            db = get_db()
-            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
+            subscription = Subscription.query.filter_by(user_id=user_id).first()
             
-            if subscription and subscription.get('access_expires_at'):
-                expires_at = subscription['access_expires_at']
-                if datetime.now() < expires_at:
+            if subscription and subscription.access_expires_at:
+                if datetime.now() < subscription.access_expires_at:
                     return redirect(url_for('dashboard'))
         except Exception as e:
             print(f"[PRICING ERROR] {str(e)}")
@@ -258,22 +265,20 @@ def create_checkout_session():
         print(f"[DEBUG] Creating checkout for user {user_id} ({email})")
         
         try:
-            db = get_db()
-            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
+            subscription = Subscription.query.filter_by(user_id=user_id).first()
             
-            if subscription and subscription.get('stripe_customer_id'):
-                customer_id = subscription['stripe_customer_id']
+            if subscription and subscription.stripe_customer_id:
+                customer_id = subscription.stripe_customer_id
                 print(f"[DEBUG] Using existing customer: {customer_id}")
             else:
                 print(f"[DEBUG] Creating new Stripe customer")
                 customer = stripe.Customer.create(email=email)
                 customer_id = customer.id
                 print(f"[DEBUG] New customer created: {customer_id}")
-                db.subscriptions.update_one(
-                    {'user_id': ObjectId(user_id)},
-                    {'$set': {'stripe_customer_id': customer_id}}
-                )
+                subscription.stripe_customer_id = customer_id
+                db.session.commit()
         except Exception as db_err:
+            db.session.rollback()
             print(f"[DB ERROR] {str(db_err)}")
             raise
         
@@ -321,20 +326,18 @@ def success():
         
         access_expires = datetime.now() + timedelta(days=30)
         
-        db = get_db()
-        db.subscriptions.update_one(
-            {'user_id': ObjectId(user_id)},
-            {'$set': {
-                'stripe_subscription_id': checkout_session.id,
-                'access_expires_at': access_expires,
-                'updated_at': datetime.now()
-            }}
-        )
+        subscription = Subscription.query.filter_by(user_id=user_id).first()
+        subscription.stripe_subscription_id = checkout_session.id
+        subscription.access_expires_at = access_expires
+        subscription.updated_at = datetime.now()
+        
+        db.session.commit()
         
         print(f"[SUCCESS] Payment received for user {user_id}. Access until {access_expires}")
         return redirect(url_for('dashboard'))
     
     except Exception as e:
+        db.session.rollback()
         print(f"[ERROR] Success page error: {str(e)}")
         import traceback
         traceback.print_exc()
@@ -350,11 +353,10 @@ def subscription_info():
     """Retourne les infos d'abonnement de l'utilisateur"""
     user_id = session['user_id']
     try:
-        db = get_db()
-        subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
+        subscription = Subscription.query.filter_by(user_id=user_id).first()
         
-        if subscription and subscription.get('access_expires_at'):
-            expires_at = subscription['access_expires_at']
+        if subscription and subscription.access_expires_at:
+            expires_at = subscription.access_expires_at
             days_left = (expires_at - datetime.now()).days
             
             return jsonify({
@@ -508,7 +510,7 @@ def health():
         'app': 'Dutching Turf',
         'timestamp': datetime.now().isoformat(),
         'scraper': SCRAPER_AVAILABLE,
-        'database': 'MongoDB'
+        'database': 'PostgreSQL'
     })
 
 # ============================================
