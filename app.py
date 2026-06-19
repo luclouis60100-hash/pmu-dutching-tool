@@ -3,6 +3,7 @@ load_dotenv()
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import os
 from flask_sqlalchemy import SQLAlchemy
+from flask_mail import Mail, Message
 from sqlalchemy import func
 import stripe
 import urllib.request
@@ -26,7 +27,6 @@ app.secret_key = os.environ.get('SECRET_KEY', 'pmu-dutching-tool-secret-key-chan
 # Database configuration
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # Fix Neon SQLAlchemy URL format
     if DATABASE_URL.startswith('postgresql://'):
         DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
 
@@ -34,6 +34,16 @@ app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///pmu_dutching.
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+
+# Mail configuration
+app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+app.config['MAIL_PORT'] = 587
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'your-email@gmail.com')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your-app-password')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME', 'your-email@gmail.com')
+
+mail = Mail(app)
 
 # Stripe configuration
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_your_key_here')
@@ -141,6 +151,57 @@ def index():
     return render_template('index.html')
 
 # ============================================
+# CONTACT ROUTE
+# ============================================
+
+@app.route('/contact', methods=['GET', 'POST'])
+def contact():
+    if request.method == 'POST':
+        try:
+            name = request.form.get('name', '').strip()
+            email = request.form.get('email', '').strip()
+            subject = request.form.get('subject', '').strip()
+            message = request.form.get('message', '').strip()
+            
+            # Validation
+            if not all([name, email, subject, message]):
+                return jsonify({'error': 'Tous les champs sont requis'}), 400
+            
+            if len(message) < 10:
+                return jsonify({'error': 'Le message doit faire au moins 10 caractères'}), 400
+            
+            # Envoyer l'email
+            msg = Message(
+                subject=f'Dutching Turf - Contact: {subject}',
+                recipients=[app.config['MAIL_USERNAME']],
+                body=f"""
+Nouveau message de contact :
+
+Nom : {name}
+Email : {email}
+Sujet : {subject}
+
+Message :
+{message}
+
+---
+Répondre à : {email}
+                """,
+                reply_to=email
+            )
+            
+            mail.send(msg)
+            
+            print(f"[CONTACT] Message reçu de {name} ({email})")
+            return jsonify({'success': True, 'message': 'Message envoyé avec succès ! Merci de nous avoir contacté.'}), 200
+        
+        except Exception as e:
+            print(f"[CONTACT ERROR] {str(e)}")
+            return jsonify({'error': f'Erreur : {str(e)}'}), 500
+    
+    return render_template('contact.html')
+
+# ============================================
 # AUTH ROUTES
 # ============================================
 
@@ -161,19 +222,16 @@ def signup():
             return render_template('signup.html', error='Le mot de passe doit faire au moins 6 caractères')
         
         try:
-            # Check if user exists
             existing_user = User.query.filter_by(email=email).first()
             if existing_user:
                 return render_template('signup.html', error='Cet email est déjà inscrit')
             
             hashed_password = hashlib.sha256(password.encode()).hexdigest()
             
-            # Create user
             new_user = User(email=email, password=hashed_password)
             db.session.add(new_user)
-            db.session.flush()  # Get the ID without committing
+            db.session.flush()
             
-            # Create subscription
             new_subscription = Subscription(user_id=new_user.id)
             db.session.add(new_subscription)
             
@@ -204,7 +262,6 @@ def login():
                 session['user_id'] = user.id
                 session['email'] = user.email
                 
-                # Vérifier si abonnement valide
                 try:
                     subscription = Subscription.query.filter_by(user_id=user.id).first()
                     
