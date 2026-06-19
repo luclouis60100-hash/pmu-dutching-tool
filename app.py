@@ -3,12 +3,14 @@ load_dotenv()
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import os
 import json
-import sqlite3
+from pymongo import MongoClient
+from pymongo.errors import DuplicateKeyError
 import stripe
 import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
 import hashlib
+from bson.objectid import ObjectId
 
 # Scraping imports
 try:
@@ -26,48 +28,41 @@ app.secret_key = os.environ.get('SECRET_KEY', 'pmu-dutching-tool-secret-key-chan
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_your_key_here')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_your_key_here')
 
-# Database
-DB_FILE = 'pmu_users.db'
+# MongoDB configuration
+MONGODB_URL = os.environ.get('MONGODB_URI')
 
 # ============================================
-# DATABASE HELPERS WITH TIMEOUT
+# DATABASE HELPERS - MongoDB
 # ============================================
 
-def get_db_connection():
-    """Get database connection with timeout"""
-    conn = sqlite3.connect(DB_FILE, timeout=10.0)
-    conn.isolation_level = None
-    return conn
+def get_db():
+    """Get MongoDB connection"""
+    if not MONGODB_URL:
+        raise Exception("MONGODB_URI environment variable not set!")
+    
+    client = MongoClient(MONGODB_URL)
+    db = client['pmu_dutching']
+    return db
 
 def init_db():
-    """Initialize database"""
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS subscriptions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            stripe_customer_id TEXT,
-            stripe_subscription_id TEXT,
-            access_expires_at TIMESTAMP,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(user_id) REFERENCES users(id)
-        )
-    ''')
-    
-    conn.commit()
-    conn.close()
+    """Initialize MongoDB collections and indexes"""
+    try:
+        db = get_db()
+        
+        # Create collections if they don't exist
+        if 'users' not in db.list_collection_names():
+            db.create_collection('users')
+        
+        if 'subscriptions' not in db.list_collection_names():
+            db.create_collection('subscriptions')
+        
+        # Create indexes
+        db.users.create_index('email', unique=True)
+        db.subscriptions.create_index('user_id')
+        
+        print("[DB] MongoDB initialized successfully")
+    except Exception as e:
+        print(f"[ERROR] Database initialization: {str(e)}")
 
 init_db()
 
@@ -91,16 +86,13 @@ def premium_required(f):
         
         user_id = session['user_id']
         try:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-            result = c.fetchone()
-            conn.close()
+            db = get_db()
+            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
             
-            if not result or result[0] is None:
+            if not subscription or subscription.get('access_expires_at') is None:
                 return redirect(url_for('pricing'))
             
-            expires_at = datetime.fromisoformat(result[0])
+            expires_at = subscription['access_expires_at']
             if datetime.now() > expires_at:
                 return redirect(url_for('pricing'))
         except Exception as e:
@@ -119,14 +111,11 @@ def index():
     if 'user_id' in session:
         user_id = session['user_id']
         try:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-            result = c.fetchone()
-            conn.close()
+            db = get_db()
+            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
             
-            if result and result[0]:
-                expires_at = datetime.fromisoformat(result[0])
+            if subscription and subscription.get('access_expires_at'):
+                expires_at = subscription['access_expires_at']
                 if datetime.now() < expires_at:
                     return redirect(url_for('dashboard'))
         except:
@@ -158,25 +147,31 @@ def signup():
         
         try:
             hashed_password = hashlib.sha256(password.encode()).hexdigest()
-            conn = get_db_connection()
-            c = conn.cursor()
+            db = get_db()
             
-            c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
-            user_id = c.lastrowid
+            # Insert user
+            user_result = db.users.insert_one({
+                'email': email,
+                'password': hashed_password,
+                'created_at': datetime.now()
+            })
+            user_id = user_result.inserted_id
             
-            c.execute('''
-                INSERT INTO subscriptions (user_id, access_expires_at) 
-                VALUES (?, ?)
-            ''', (user_id, None))
+            # Create subscription
+            db.subscriptions.insert_one({
+                'user_id': user_id,
+                'stripe_customer_id': None,
+                'stripe_subscription_id': None,
+                'access_expires_at': None,
+                'created_at': datetime.now(),
+                'updated_at': datetime.now()
+            })
             
-            conn.commit()
-            conn.close()
-            
-            session['user_id'] = user_id
+            session['user_id'] = str(user_id)
             session['email'] = email
             return redirect(url_for('pricing'))
             
-        except sqlite3.IntegrityError:
+        except DuplicateKeyError:
             return render_template('signup.html', error='Cet email est déjà inscrit')
         except Exception as e:
             print(f"[SIGNUP ERROR] {str(e)}")
@@ -192,26 +187,19 @@ def login():
         
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
         try:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute('SELECT id, email FROM users WHERE email = ? AND password = ?', (email, hashed_password))
-            user = c.fetchone()
-            conn.close()
+            db = get_db()
+            user = db.users.find_one({'email': email, 'password': hashed_password})
             
             if user:
-                session['user_id'] = user[0]
-                session['email'] = user[1]
+                session['user_id'] = str(user['_id'])
+                session['email'] = user['email']
                 
                 # Vérifier si abonnement valide
                 try:
-                    conn = get_db_connection()
-                    c = conn.cursor()
-                    c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user[0],))
-                    result = c.fetchone()
-                    conn.close()
+                    subscription = db.subscriptions.find_one({'user_id': user['_id']})
                     
-                    if result and result[0]:
-                        expires_at = datetime.fromisoformat(result[0])
+                    if subscription and subscription.get('access_expires_at'):
+                        expires_at = subscription['access_expires_at']
                         if datetime.now() < expires_at:
                             return redirect(url_for('dashboard'))
                 except:
@@ -239,14 +227,11 @@ def pricing():
     if 'user_id' in session:
         user_id = session['user_id']
         try:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-            result = c.fetchone()
-            conn.close()
+            db = get_db()
+            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
             
-            if result and result[0]:
-                expires_at = datetime.fromisoformat(result[0])
+            if subscription and subscription.get('access_expires_at'):
+                expires_at = subscription['access_expires_at']
                 if datetime.now() < expires_at:
                     return redirect(url_for('dashboard'))
         except Exception as e:
@@ -271,27 +256,23 @@ def create_checkout_session():
         email = session['email']
         
         print(f"[DEBUG] Creating checkout for user {user_id} ({email})")
-        print(f"[DEBUG] Stripe API Key loaded: {stripe.api_key is not None and stripe.api_key != 'sk_test_your_key_here'}")
         
         try:
-            conn = get_db_connection()
-            c = conn.cursor()
-            c.execute('SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?', (user_id,))
-            result = c.fetchone()
+            db = get_db()
+            subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
             
-            if result and result[0]:
-                customer_id = result[0]
+            if subscription and subscription.get('stripe_customer_id'):
+                customer_id = subscription['stripe_customer_id']
                 print(f"[DEBUG] Using existing customer: {customer_id}")
             else:
                 print(f"[DEBUG] Creating new Stripe customer")
                 customer = stripe.Customer.create(email=email)
                 customer_id = customer.id
                 print(f"[DEBUG] New customer created: {customer_id}")
-                c.execute('UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?', 
-                         (customer_id, user_id))
-                conn.commit()
-            
-            conn.close()
+                db.subscriptions.update_one(
+                    {'user_id': ObjectId(user_id)},
+                    {'$set': {'stripe_customer_id': customer_id}}
+                )
         except Exception as db_err:
             print(f"[DB ERROR] {str(db_err)}")
             raise
@@ -340,17 +321,15 @@ def success():
         
         access_expires = datetime.now() + timedelta(days=30)
         
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute('''
-            UPDATE subscriptions 
-            SET stripe_subscription_id = ?, 
-                access_expires_at = ?,
-                updated_at = CURRENT_TIMESTAMP
-            WHERE user_id = ?
-        ''', (checkout_session.id, access_expires.isoformat(), user_id))
-        conn.commit()
-        conn.close()
+        db = get_db()
+        db.subscriptions.update_one(
+            {'user_id': ObjectId(user_id)},
+            {'$set': {
+                'stripe_subscription_id': checkout_session.id,
+                'access_expires_at': access_expires,
+                'updated_at': datetime.now()
+            }}
+        )
         
         print(f"[SUCCESS] Payment received for user {user_id}. Access until {access_expires}")
         return redirect(url_for('dashboard'))
@@ -371,14 +350,11 @@ def subscription_info():
     """Retourne les infos d'abonnement de l'utilisateur"""
     user_id = session['user_id']
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
-        result = c.fetchone()
-        conn.close()
+        db = get_db()
+        subscription = db.subscriptions.find_one({'user_id': ObjectId(user_id)})
         
-        if result and result[0]:
-            expires_at = datetime.fromisoformat(result[0])
+        if subscription and subscription.get('access_expires_at'):
+            expires_at = subscription['access_expires_at']
             days_left = (expires_at - datetime.now()).days
             
             return jsonify({
@@ -531,7 +507,8 @@ def health():
         'status': 'ok',
         'app': 'Dutching Turf',
         'timestamp': datetime.now().isoformat(),
-        'scraper': SCRAPER_AVAILABLE
+        'scraper': SCRAPER_AVAILABLE,
+        'database': 'MongoDB'
     })
 
 # ============================================
