@@ -3,7 +3,8 @@ load_dotenv()
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import os
 from flask_sqlalchemy import SQLAlchemy
-from flask_mail import Mail, Message
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from sqlalchemy import func
 import stripe
 import urllib.request
@@ -35,15 +36,9 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Mail configuration
-app.config['MAIL_SERVER'] = 'smtp.gmail.com'
-app.config['MAIL_PORT'] = 587
-app.config['MAIL_USE_TLS'] = True
-app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', 'your-email@gmail.com')
-app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', 'your-app-password')
-app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_USERNAME', 'your-email@gmail.com')
-
-mail = Mail(app)
+# SendGrid configuration
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
+SENDGRID_FROM_EMAIL = os.environ.get('MAIL_USERNAME', 'luclouis60100@gmail.com')
 
 # Stripe configuration
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_your_key_here')
@@ -381,6 +376,11 @@ def success():
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         user_id = session['user_id']
         
+        # Récupérer l'utilisateur pour l'email
+        user = User.query.get(user_id)
+        if not user:
+            return redirect(url_for('dashboard'))
+        
         access_expires = datetime.now() + timedelta(days=30)
         
         subscription = Subscription.query.filter_by(user_id=user_id).first()
@@ -389,6 +389,73 @@ def success():
         subscription.updated_at = datetime.now()
         
         db.session.commit()
+        
+        # 📧 Envoyer email de confirmation avec SendGrid
+        try:
+            if SENDGRID_API_KEY:
+                sg = SendGridAPIClient(SENDGRID_API_KEY)
+                
+                email_content = f"""
+Bonjour,
+
+Merci pour votre abonnement à Dutching Turf Premium ! 🎉
+
+🎟️ DÉTAILS DE VOTRE ABONNEMENT:
+• Montant: 9,99€
+• Durée: 30 jours
+• Expire le: {access_expires.strftime('%d/%m/%Y')}
+• Accès: Illimité au dashboard complet
+
+🚀 COMMENCEZ MAINTENANT:
+1. Allez sur: https://pmu-dutching-tool.onrender.com/dashboard
+2. Sélectionnez une course
+3. Analysez les chevaux avec l'outil musicale
+
+❓ BESOIN D'AIDE?
+Contactez-nous: https://pmu-dutching-tool.onrender.com/contact
+
+À bientôt sur Dutching Turf! 🏇
+
+---
+Dutching Turf Team
+                """
+                
+                message = Mail(
+                    from_email=SENDGRID_FROM_EMAIL,
+                    to_emails=user.email,
+                    subject='✅ Bienvenue à Dutching Turf Premium !',
+                    plain_text_content=email_content,
+                    html_content=f"""
+                    <html>
+                        <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
+                            <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
+                                <h1 style="color: #667eea; margin-bottom: 20px">✅ Bienvenue à Dutching Turf Premium!</h1>
+                                
+                                <p style="color: #333; font-size: 16px; line-height: 1.6">Merci pour votre abonnement ! 🎉</p>
+                                
+                                <div style="background: #f8f9fb; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 5px">
+                                    <h3 style="color: #667eea; margin-top: 0">Détails de votre abonnement:</h3>
+                                    <p style="margin: 5px 0"><strong>Montant:</strong> 9,99€</p>
+                                    <p style="margin: 5px 0"><strong>Durée:</strong> 30 jours</p>
+                                    <p style="margin: 5px 0"><strong>Expire le:</strong> {access_expires.strftime('%d/%m/%Y')}</p>
+                                    <p style="margin: 5px 0"><strong>Accès:</strong> Illimité ✅</p>
+                                </div>
+                                
+                                <div style="text-align: center; margin: 30px 0">
+                                    <a href="https://pmu-dutching-tool.onrender.com/dashboard" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Aller au Dashboard</a>
+                                </div>
+                                
+                                <p style="color: #666; font-size: 14px">Besoin d'aide ? <a href="https://pmu-dutching-tool.onrender.com/contact" style="color: #667eea">Contactez-nous</a></p>
+                            </div>
+                        </body>
+                    </html>
+                    """
+                )
+                
+                sg.send(message)
+                print(f"[EMAIL] Confirmation envoyée à {user.email}")
+        except Exception as email_err:
+            print(f"[EMAIL ERROR] {str(email_err)}")
         
         print(f"[SUCCESS] Payment received for user {user_id}. Access until {access_expires}")
         return redirect(url_for('dashboard'))

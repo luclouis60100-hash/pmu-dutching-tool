@@ -6,4 +6,4 @@ requests==2.31.0
 beautifulsoup4==4.12.2
 Flask-SQLAlchemy==3.1.1
 psycopg2-binary>=2.9.10
-Flask-Mail==0.9.1
+sendgrid>=6.10.0
