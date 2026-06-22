@@ -151,49 +151,7 @@ def index():
 
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
-    if request.method == 'POST':
-        try:
-            name = request.form.get('name', '').strip()
-            email = request.form.get('email', '').strip()
-            subject = request.form.get('subject', '').strip()
-            message = request.form.get('message', '').strip()
-            
-            # Validation
-            if not all([name, email, subject, message]):
-                return jsonify({'error': 'Tous les champs sont requis'}), 400
-            
-            if len(message) < 10:
-                return jsonify({'error': 'Le message doit faire au moins 10 caractères'}), 400
-            
-            # Envoyer l'email
-            msg = Message(
-                subject=f'Dutching Turf - Contact: {subject}',
-                recipients=[app.config['MAIL_USERNAME']],
-                body=f"""
-Nouveau message de contact :
-
-Nom : {name}
-Email : {email}
-Sujet : {subject}
-
-Message :
-{message}
-
----
-Répondre à : {email}
-                """,
-                reply_to=email
-            )
-            
-            mail.send(msg)
-            
-            print(f"[CONTACT] Message reçu de {name} ({email})")
-            return jsonify({'success': True, 'message': 'Message envoyé avec succès ! Merci de nous avoir contacté.'}), 200
-        
-        except Exception as e:
-            print(f"[CONTACT ERROR] {str(e)}")
-            return jsonify({'error': f'Erreur : {str(e)}'}), 500
-    
+    # Le formulaire utilise Formspree, pas besoin de gérer le POST ici
     return render_template('contact.html')
 
 # ============================================
