@@ -35,13 +35,7 @@
 body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; }
 html, body { height: 100%; }
 #page-courses { display: flex; flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
-
-.topbar {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  padding: 0 1.5rem; height: 56px;
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
-}
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 1.5rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
 .logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
 .logo-mark { background: var(--accent); color: white; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
 .live-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; }
@@ -49,93 +43,45 @@ html, body { height: 100%; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 .cd { font-family: var(--mono); font-weight: 500; color: var(--accent); }
 #last-upd { font-size: 11px; color: var(--text3); margin-left: 8px; }
-
-/* Réunions */
-.reunions-bar {
-  background: var(--surface); border-bottom: 2px solid var(--border);
-  padding: 0 1.5rem; display: flex; align-items: center; gap: 2px;
-  overflow-x: auto; scrollbar-width: none;
-}
+.reunions-bar { background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 1.5rem; display: flex; align-items: center; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 .reunions-bar::-webkit-scrollbar { display: none; }
-.r-tab {
-  display: flex; align-items: center; gap: 8px;
-  padding: 13px 16px; cursor: pointer; white-space: nowrap;
-  color: var(--text2); font-size: 13px; font-weight: 500;
-  border-bottom: 2px solid transparent; margin-bottom: -2px;
-  transition: all 0.15s; user-select: none; border-radius: 4px 4px 0 0;
-}
+.r-tab { display: flex; align-items: center; gap: 8px; padding: 13px 16px; cursor: pointer; white-space: nowrap; color: var(--text2); font-size: 13px; font-weight: 500; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s; user-select: none; border-radius: 4px 4px 0 0; }
 .r-tab:hover { color: var(--text); background: var(--surface2); }
 .r-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.r-num {
-  font-family: var(--mono); font-size: 10px; font-weight: 500;
-  background: var(--surface2); color: var(--text3);
-  padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border);
-}
+.r-num { font-family: var(--mono); font-size: 10px; font-weight: 500; background: var(--surface2); color: var(--text3); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border); }
 .r-tab.active .r-num { background: var(--accent); color: white; border-color: var(--accent); }
-
-/* Layout */
 .layout { display: grid; grid-template-columns: 230px 1fr; height: calc(100vh - 103px); }
-
-/* Sidebar */
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 6px 0; }
 .sb-label { padding: 10px 14px 4px; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); }
-.c-item {
-  padding: 9px 14px; cursor: pointer;
-  display: flex; align-items: center; gap: 8px;
-  border-left: 3px solid transparent; transition: all 0.12s;
-}
+.c-item { padding: 9px 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; border-left: 3px solid transparent; transition: all 0.12s; }
 .c-item:hover { background: var(--surface2); }
 .c-item.active { background: var(--selected-bg); border-left-color: var(--accent); }
-.c-badge {
-  width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0;
-  background: var(--surface2); border: 1px solid var(--border);
-  display: flex; align-items: center; justify-content: center;
-  font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text2);
-}
+.c-badge { width: 26px; height: 26px; border-radius: 6px; flex-shrink: 0; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--text2); }
 .c-item.active .c-badge { background: var(--accent-light); border-color: #bfdbfe; color: var(--accent-text); }
 .c-body { min-width: 0; flex: 1; }
 .c-name { font-size: 12px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .c-meta { font-size: 11px; color: var(--text3); margin-top: 1px; }
 .c-heure { font-family: var(--mono); font-size: 11px; color: var(--text3); flex-shrink: 0; }
 .c-item.active .c-heure { color: var(--accent); }
-
-/* Main */
 .main { overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
-
-/* Controls */
 .top-controls { display: grid; grid-template-columns: auto 1fr 1fr 1fr 1fr; gap: 10px; }
-.budget-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 12px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center;
-}
+.budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center; }
 .ctrl-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
 .budget-row { display: flex; align-items: baseline; gap: 4px; }
-.budget-row input {
-  font-size: 22px; font-family: var(--mono); font-weight: 500; color: var(--text);
-  background: transparent; border: none; outline: none; width: 80px; padding: 0;
-}
+.budget-row input { font-size: 22px; font-family: var(--mono); font-weight: 500; color: var(--text); background: transparent; border: none; outline: none; width: 80px; padding: 0; }
 .budget-row input::-webkit-inner-spin-button { display: none; }
 .eur { font-size: 15px; color: var(--text2); }
-.stat-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 12px 16px; box-shadow: var(--shadow);
-}
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); }
 .stat-val { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--text); }
 .stat-val.blue { color: var(--accent); }
 .stat-val.green { color: var(--green); }
 .stat-val.red { color: var(--red); }
-
-/* Warning */
 .warn { background: var(--orange-light); border: 1px solid #fbbf24; border-radius: var(--radius); padding: 9px 14px; font-size: 13px; color: var(--orange); display: none; align-items: center; gap: 8px; }
-
-/* Course header */
 .c-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; box-shadow: var(--shadow); }
 .c-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; letter-spacing: -0.01em; }
 .tags { display: flex; flex-wrap: wrap; gap: 6px; }
 .tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
 .tag.bl { background: var(--accent-light); border-color: #bfdbfe; color: var(--accent-text); font-family: var(--mono); font-weight: 500; }
-
-/* Table */
 .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 table { width: 100%; border-collapse: collapse; }
 thead { background: var(--surface2); border-bottom: 1px solid var(--border2); }
@@ -148,12 +94,7 @@ tr.sel td:first-child { border-left: 3px solid var(--accent); }
 tr.sel:hover td { background: #dbeafe; }
 .chk-col { width: 38px; text-align: center; }
 input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
-.npill {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 26px; height: 26px; border-radius: 6px;
-  background: var(--surface2); border: 1px solid var(--border);
-  font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text2);
-}
+.npill { display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 26px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text2); }
 tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: var(--accent-text); }
 .hnom { font-weight: 600; font-size: 13px; }
 .hsub { font-size: 11px; color: var(--text3); margin-top: 1px; }
@@ -163,92 +104,13 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
 .mise-num { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); }
 .gain-num { font-family: var(--mono); font-size: 13px; font-weight: 500; }
 th.sortable { cursor: pointer; user-select: none; }
-/* Onglet Résultats */
-.tab-btn {
-  padding: 0 18px; height: 56px; border: none; background: transparent;
-  font-family: var(--font); font-size: 14px; font-weight: 500;
-  cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent;
-  transition: all 0.15s; display: flex; align-items: center; gap: 6px;
-}
+.tab-btn { padding: 0 18px; height: 56px; border: none; background: transparent; font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
 .tab-btn:hover { color: var(--text); background: var(--surface2); }
 .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-.tab-badge { background: var(--accent); color: white; font-size: 10px;
-  font-weight: 700; padding: 1px 6px; border-radius: 10px; }
-/* Bouton Valider */
-.btn-valider {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--green); color: white; border: none;
-  border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600;
-  font-family: var(--font); cursor: pointer; transition: all 0.15s;
-}
+.tab-badge { background: var(--accent); color: white; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px; }
+.btn-valider { display: flex; align-items: center; gap: 6px; background: var(--green); color: white; border: none; border-radius: 8px; padding: 7px 16px; font-size: 13px; font-weight: 600; font-family: var(--font); cursor: pointer; transition: all 0.15s; }
 .btn-valider:hover { background: #047857; }
 .btn-valider:disabled { background: var(--text3); cursor: not-allowed; }
-.btn-modifier {
-  display: flex; align-items: center; gap: 5px;
-  background: var(--orange-light); color: var(--orange); border: 1px solid #fbbf24;
-  border-radius: 8px; padding: 6px 14px; font-size: 13px; font-weight: 600;
-  font-family: var(--font); cursor: pointer;
-}
-/* Page résultats */
-.results-page { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
-.res-header { display: flex; align-items: center; justify-content: space-between; }
-.res-title { font-size: 16px; font-weight: 600; }
-.res-stats { display: grid; grid-template-columns: repeat(5,1fr); gap: 10px; }
-.res-stat { background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; padding: 12px 16px; box-shadow: var(--shadow); }
-.res-stat-label { font-size: 10px; font-weight: 600; letter-spacing: .07em;
-  text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
-.res-stat-val { font-size: 20px; font-weight: 600; font-family: var(--mono); }
-.pari-card { background: var(--surface); border: 1px solid var(--border);
-  border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); }
-.pari-card-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px; background: var(--surface2); border-bottom: 1px solid var(--border);
-  gap: 10px; flex-wrap: wrap;
-}
-.pari-card-head.won { background: #f0fdf4; border-color: #86efac; }
-.pari-card-head.lost { background: #fff1f2; border-color: #fda4af; }
-.pari-card-head.pending { background: #fffbeb; border-color: #fde68a; }
-.pari-info { font-size: 12px; color: var(--text2); }
-.pari-course { font-weight: 600; font-size: 14px; }
-.pari-result { font-family: var(--mono); font-size: 15px; font-weight: 700; }
-.pari-result.won { color: var(--green); }
-.pari-result.lost { color: var(--red); }
-.pari-result.pending { color: var(--orange); }
-.pari-chevaux { padding: 10px 16px; display: flex; flex-wrap: wrap; gap: 6px; }
-.pari-chip { display: flex; align-items: center; gap: 5px; font-size: 12px;
-  padding: 4px 10px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); }
-.pari-chip.gagnant { background: #f0fdf4; border-color: #86efac; }
-.pari-chip-num { font-family: var(--mono); font-weight: 600; color: var(--accent-text); }
-.pari-chip-mise { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-.pari-actions { padding: 8px 16px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
-.btn-delete { background: none; border: 1px solid var(--border); border-radius: 6px;
-  padding: 4px 10px; font-size: 11px; color: var(--text3); cursor: pointer; font-family: var(--font); }
-.btn-delete:hover { border-color: var(--red); color: var(--red); }
-.date-filter {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-}
-.date-filter-btn {
-  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--surface); font-size: 12px; font-weight: 500;
-  cursor: pointer; font-family: var(--font); color: var(--text2);
-  transition: all 0.12s;
-}
-.date-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-.date-filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-.date-filter input[type=date] {
-  border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px;
-  font-size: 12px; font-family: var(--font); color: var(--text);
-  background: var(--surface); cursor: pointer; outline: none;
-}
-.date-filter input[type=date]:focus { border-color: var(--accent); }
-.validated-bar { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
-  padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-th.sortable:hover { color: var(--accent); background: #f0f4ff; }
-th.sortable.active { color: var(--accent); }
-.sort-icon { margin-left: 4px; font-size: 10px; color: var(--accent); }
-
-/* States */
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--text3); gap: 10px; text-align: center; }
 .empty .ico { font-size: 44px; }
 .empty .tit { font-size: 15px; font-weight: 500; color: var(--text2); }
@@ -258,240 +120,12 @@ th.sortable.active { color: var(--accent); }
 @keyframes spin { to { transform: rotate(360deg); } }
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
-
-/* Equidia pronostics */
-.equidia-bar {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow);
-}
-.equidia-title {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--text3); margin-bottom: 10px;
-  display: flex; align-items: center; justify-content: space-between;
-}
-.equidia-logo {
-  display: flex; align-items: center; gap: 6px;
-}
-.equidia-badge {
-  background: #e8f4f0; color: #0d7254; border: 1px solid #a7d9c8;
-  font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
-  letter-spacing: 0.06em;
-}
-.equidia-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.eq-chip {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer;
-  transition: all 0.12s;
-}
-.eq-chip:hover { border-color: var(--accent); background: var(--accent-light); }
-.eq-chip.base { background: #e8f4f0; border-color: #a7d9c8; }
-.eq-chip.base:hover { background: #d1ede5; }
-.eq-pos { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text3); min-width: 16px; }
-.eq-chip.base .eq-pos { color: #0d7254; }
-.eq-num { font-family: var(--mono); font-size: 11px; color: var(--accent-text); background: var(--accent-light); padding: 1px 5px; border-radius: 4px; }
-.eq-nom { font-weight: 600; font-size: 12px; }
-.eq-cote { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-.eq-note { font-size: 10px; color: var(--text3); }
-.record-km {
-  font-family: var(--mono); font-size: 12px; font-weight: 500;
-  color: #0d7254; background: #e8f4f0;
-  padding: 2px 7px; border-radius: 5px; border: 1px solid #a7d9c8;
-  white-space: nowrap;
-}
-.record-na { font-size: 12px; color: var(--text3); }
-.vp-cell { display: flex; gap: 4px; align-items: center; white-space: nowrap; }
-.vp-badge { font-family: var(--mono); font-size: 11px; font-weight: 600;
-  padding: 2px 6px; border-radius: 4px; }
-.vp-v { background: #fef9c3; color: #b45309; border: 1px solid #fbbf24; }
-.vp-v.good { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
-.vp-p { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
-.vp-p.good { background: #dbeafe; color: #1e3a8a; border-color: #93c5fd; }
-/* Panneau flottant ticket de pari */
-#ticket-flottant {
-  position: fixed; bottom: 20px; right: 20px; z-index: 9999;
-  width: 320px; background: var(--surface);
-  border: 2px solid var(--accent); border-radius: 14px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18); overflow: hidden;
-  font-family: var(--font); transition: all .2s;
-}
-#ticket-flottant.minimized { width: 180px; }
-.ticket-header {
-  background: var(--accent); color: white; padding: 10px 14px;
-  display: flex; align-items: center; justify-content: space-between;
-  cursor: pointer; user-select: none;
-}
-.ticket-title { font-size: 13px; font-weight: 700; }
-.ticket-countdown { font-family: var(--mono); font-size: 12px; opacity: .9; }
-.ticket-body { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-.ticket-cheval {
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--surface2); border-radius: 8px; padding: 6px 10px;
-}
-.ticket-num { background: var(--accent); color: white; border-radius: 4px;
-  padding: 1px 6px; font-family: var(--mono); font-size: 11px; font-weight: 700; }
-.ticket-nom { font-size: 12px; font-weight: 500; flex: 1; margin: 0 8px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ticket-cote { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-.ticket-mise { font-family: var(--mono); font-size: 14px; font-weight: 700;
-  color: var(--accent); min-width: 45px; text-align: right; }
-.ticket-total { display: flex; justify-content: space-between; align-items: center;
-  border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px; }
-.ticket-alerte {
-  background: #fef9c3; border: 1px solid #fbbf24;
-  border-radius: 6px; padding: 6px 10px; font-size: 11px;
-  font-weight: 600; color: #92400e; text-align: center;
-}
-.ticket-min-btn {
-  background: rgba(255,255,255,.2); border: none; color: white;
-  border-radius: 4px; padding: 2px 8px; cursor: pointer; font-size: 12px;
-}
-/* Archives */
-.archive-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); box-shadow: var(--shadow);
-  overflow: hidden;
-}
-.archive-header {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 16px; border-bottom: 1px solid var(--border);
-  background: var(--surface2);
-}
-.archive-date { font-size: 14px; font-weight: 700; color: var(--text); font-family: var(--mono); }
-.archive-body { display: grid; grid-template-columns: repeat(5,1fr); gap: 0; }
-.archive-stat { padding: 10px 14px; border-right: 1px solid var(--border); text-align: center; }
-.archive-stat:last-child { border-right: none; }
-.archive-stat-label { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 4px; }
-.archive-stat-val { font-size: 16px; font-weight: 700; font-family: var(--mono); }
-.archive-reunions { padding: 10px 16px; font-size: 11px; color: var(--text3); border-top: 1px solid var(--border); }
-.archive-note { padding: 6px 16px 10px; font-size: 11px; color: var(--text2); font-style: italic; }
-/* Barre de chargement */
-.loading-bar-wrap {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px 24px;
-  box-shadow: var(--shadow); text-align: center;
-}
-.loading-bar-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.loading-bar-sub { font-size: 12px; color: var(--text3); margin-bottom: 14px; }
-.loading-bar-track {
-  background: var(--surface2); border-radius: 99px;
-  height: 12px; overflow: hidden; margin-bottom: 8px;
-}
-.loading-bar-fill {
-  height: 100%; border-radius: 99px;
-  background: linear-gradient(90deg, var(--accent), #60a5fa);
-  transition: width 0.3s ease;
-}
-.loading-bar-pct { font-size: 12px; font-weight: 600; font-family: var(--mono); color: var(--accent); }
-.loading-bar-detail { font-size: 11px; color: var(--text3); margin-top: 4px; }
-/* Outsiders filtre réunions */
-.reu-filter { display: flex; flex-wrap: wrap; gap: 8px; }
-.reu-check-btn {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 12px; border-radius: 20px;
-  border: 1px solid var(--border); background: var(--surface);
-  font-size: 12px; font-weight: 500; cursor: pointer;
-  font-family: var(--font); color: var(--text2); transition: all .12s;
-}
-.reu-check-btn:hover { border-color: var(--accent); color: var(--accent); }
-.reu-check-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-.reu-check-btn .reu-check { width: 14px; height: 14px; border-radius: 3px;
-  border: 2px solid currentColor; display: flex; align-items: center; justify-content: center; }
-.reu-check-btn.active .reu-check::after { content: '✓'; font-size: 10px; }
-/* Martingale */
-.martin-reu-btn {
-  padding:7px 14px; border-radius:20px; border:1px solid var(--border);
-  background:var(--surface); font-size:12px; font-weight:500;
-  cursor:pointer; font-family:var(--font); color:var(--text2);
-  transition:all .12s;
-}
-.martin-reu-btn:hover { border-color:var(--accent); color:var(--accent); }
-.martin-reu-btn.active { background:var(--accent); color:white; border-color:var(--accent); }
-.martin-table { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; box-shadow:var(--shadow); }
-.martin-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
-.martin-stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; box-shadow:var(--shadow); }
-.ms-label { font-size:10px; font-weight:600; letter-spacing:.07em; text-transform:uppercase; color:var(--text3); margin-bottom:5px; }
-.ms-val { font-size:20px; font-weight:600; font-family:var(--mono); color:var(--text); }
-.ms-val.green { color:var(--green); }
-.ms-val.red { color:var(--red); }
-.ms-val.blue { color:var(--accent); }
-/* Valeurs handicap */
-.hval-cell { display: flex; flex-direction: column; gap: 2px; min-width: 70px; }
-.hval-cur { font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--text); }
-.hval-var { font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 3px; display: inline-flex; align-items: center; gap: 2px; }
-.hval-hausse { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-.hval-baisse { background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; }
-.hval-stable { background: #f3f4f6; color: #6b7280; border: 1px solid #d1d5db; }
-.hval-inconnu { color: var(--text3); font-size: 11px; }
-.hval-conseil { font-size: 9px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
-.def-badge {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 600; padding: 2px 6px;
-  border-radius: 4px; white-space: nowrap;
-}
-.def-tout { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-.def-ant  { background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; }
-.def-post { background: #fffbeb; color: #b45309; border: 1px solid #fcd34d; }
-.def-non  { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
-.def-prot { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
-.equidia-empty { font-size: 12px; color: var(--text3); font-style: italic; }
-.eq-hint { font-size: 11px; color: var(--text3); }
-
-/* Réunions bar */
-.reunions-bar {
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  display: flex; gap: 4px; padding: 0 1rem; overflow-x: auto; flex-shrink: 0;
-}
-.reu-btn {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  padding: 10px 16px; border: none; background: transparent; cursor: pointer;
-  font-family: var(--font); border-bottom: 2px solid transparent;
-  transition: all 0.15s; min-width: 80px; gap: 2px;
-}
-.reu-btn:hover { background: var(--surface2); }
-.reu-btn.active { border-bottom-color: var(--accent); }
-.reu-num { font-size: 11px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
-.reu-name { font-size: 12px; font-weight: 500; color: var(--text); }
-.reu-pays { font-size: 10px; color: var(--text3); }
-
-/* Layout */
-.layout { display: grid; grid-template-columns: 220px 1fr; flex: 1; overflow: hidden; min-height: 0; }
-.sidebar {
-  border-right: 1px solid var(--border); overflow-y: auto;
-  background: var(--surface); display: flex; flex-direction: column; gap: 0;
-}
-.course-btn {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
-  border: none; background: transparent; cursor: pointer; font-family: var(--font);
-  border-bottom: 1px solid var(--border); text-align: left; width: 100%;
-  transition: background 0.1s;
-}
-.course-btn:hover { background: var(--surface2); }
-.course-btn.active { background: var(--accent-light); }
-.c-num { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); min-width: 28px; }
-.c-info { display: flex; flex-direction: column; gap: 1px; }
-.c-lib { font-size: 12px; font-weight: 500; color: var(--text); }
-.c-heure { font-size: 11px; color: var(--text3); font-family: var(--mono); }
-
-/* Arrivées */
-.arrivee-bar {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow);
-}
-.arrivee-title {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--text3); margin-bottom: 10px;
-  display: flex; align-items: center; gap: 8px;
-}
+.arrivee-bar { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow); }
+.arrivee-title { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
 .arrivee-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
 .arrivee-dot.red { background: var(--red); animation: none; }
 .positions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.pos-chip {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 6px 10px;
-  font-size: 12px;
-}
+.pos-chip { display: flex; align-items: center; gap: 6px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; }
 .pos-chip.p1 { background: #fef9c3; border-color: #fbbf24; }
 .pos-chip.p2 { background: #f3f4f6; border-color: #9ca3af; }
 .pos-chip.p3 { background: #fef3e8; border-color: #f97316; }
@@ -502,26 +136,28 @@ th.sortable.active { color: var(--accent); }
 .pos-chip.p3 .pos-num { color: #ea580c; }
 .pos-horse { font-weight: 600; font-size: 12px; color: var(--text); }
 .pos-cote { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-.pos-badge { font-family: var(--mono); font-size: 10px; font-weight: 500; }
-.badge-or { background: #fef9c3; color: #b45309; padding: 2px 6px; border-radius: 4px; }
-.badge-ag { background: #f3f4f6; color: #6b7280; padding: 2px 6px; border-radius: 4px; }
-.badge-br { background: #fef3e8; color: #ea580c; padding: 2px 6px; border-radius: 4px; }
-.arrivee-pending { font-size: 12px; color: var(--text3); font-style: italic; display: flex; align-items: center; gap: 6px; }
-.ordre-badge {
-  display: inline-flex; align-items: center; justify-content: center;
-  min-width: 22px; height: 22px; border-radius: 5px;
-  font-family: var(--mono); font-size: 11px; font-weight: 600;
-  background: var(--surface2); color: var(--text3); border: 1px solid var(--border);
-}
-.ordre-badge.o1 { background: #fef9c3; color: #b45309; border-color: #fbbf24; }
-.ordre-badge.o2 { background: #f3f4f6; color: #4b5563; border-color: #9ca3af; }
-.ordre-badge.o3 { background: #fef3e8; color: #ea580c; border-color: #fdba74; }
-.disq { color: var(--red); font-size: 11px; font-style: italic; }
-
+.validated-bar { background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+th.sortable:hover { color: var(--accent); background: #f0f4ff; }
+th.sortable.active { color: var(--accent); }
+.sort-icon { margin-left: 4px; font-size: 10px; color: var(--accent); }
+.reu-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 10px 16px; border: none; background: transparent; cursor: pointer; font-family: var(--font); border-bottom: 2px solid transparent; transition: all 0.15s; min-width: 80px; gap: 2px; }
+.reu-btn:hover { background: var(--surface2); }
+.reu-btn.active { border-bottom-color: var(--accent); }
+.reu-num { font-size: 11px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
+.reu-name { font-size: 12px; font-weight: 500; color: var(--text); }
+.reu-pays { font-size: 10px; color: var(--text3); }
+.course-btn { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: none; background: transparent; cursor: pointer; font-family: var(--font); border-bottom: 1px solid var(--border); text-align: left; width: 100%; transition: background 0.1s; }
+.course-btn:hover { background: var(--surface2); }
+.course-btn.active { background: var(--accent-light); }
+.c-num { font-family: var(--mono); font-size: 11px; font-weight: 700; color: var(--accent); min-width: 28px; }
+.c-info { display: flex; flex-direction: column; gap: 1px; }
+.c-lib { font-size: 12px; font-weight: 500; color: var(--text); }
+.c-heure { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.record-km { font-family: var(--mono); font-size: 12px; font-weight: 500; color: #0d7254; background: #e8f4f0; padding: 2px 7px; border-radius: 5px; border: 1px solid #a7d9c8; white-space: nowrap; }
+.record-na { font-size: 12px; color: var(--text3); }
 </style>
 </head>
 <body>
-
 <div class="topbar">
   <div style="display:flex;align-items:center;gap:0">
     <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching PMU</div>
@@ -560,17 +196,14 @@ th.sortable.active { color: var(--accent); }
     </a>
   </div>
 </div>
-
 <div id="page-courses">
 <div class="reunions-bar" id="rbar">
   <div class="ldr"><div class="spin"></div></div>
 </div>
-
 <div class="layout">
   <div class="sidebar" id="sb">
     <div class="ldr"><div class="spin"></div></div>
   </div>
-
   <div class="main">
     <div class="top-controls">
       <div class="budget-card">
@@ -584,12 +217,9 @@ th.sortable.active { color: var(--accent); }
       <div class="stat-card"><div class="ctrl-label">Budget engagé</div><div class="stat-val" id="s-bud">—</div></div>
       <div class="stat-card"><div class="ctrl-label">Gain théorique net</div><div class="stat-val" id="s-gain">—</div></div>
       <div class="stat-card"><div class="ctrl-label">Rentable ?</div><div class="stat-val" id="s-rent">—</div></div>
-      <div style="display:flex;align-items:center;padding:0 4px"></div>
     </div>
     <div id="validated-bar" style="display:none"></div>
-
     <div class="warn" id="warn">⚠️ <span id="warn-txt"></span></div>
-
     <div id="panel">
       <div class="empty">
         <div class="ico">🏁</div>
@@ -599,55 +229,50 @@ th.sortable.active { color: var(--accent); }
     </div>
   </div>
 </div>
-
-</div><!-- /page-courses -->
-
-<div id="page-musique" style="display:none;padding:1.25rem;display:none;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
+</div>
+<div id="page-musique" style="display:none;padding:1.25rem;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🎵 Analyse de la Musique</div>
-    <div style="font-size:12px;color:var(--text3)">Score : 1er=3pts · 2e=2pts · 3e=1pt · Minimum 4 courses · Basé sur la course sélectionnée</div>
+    <div style="font-size:12px;color:var(--text3)">Score : 1er=3pts · 2e=2pts · 3e=1pt · Minimum 4 courses</div>
   </div>
   <div id="musique-content">
-    <div class="empty"><div class="ico">🎵</div><div class="tit">Sélectionnez une course</div><div class="sub">L'analyse apparaîtra ici</div></div>
+    <div class="empty"><div class="ico">🎵</div><div class="tit">Sélectionnez une course</div></div>
   </div>
 </div>
-
 <div id="page-rapports" style="display:none;padding:1.25rem;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
     <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🏆 Résultats Définitifs</div>
     <div style="font-size:12px;color:var(--text3)">Arrivée officielle avec cotes gagnant et placé</div>
   </div>
   <div id="rapports-content">
-    <div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div><div class="sub">Les résultats apparaîtront ici</div></div>
+    <div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div></div>
   </div>
 </div>
-
 <script>
-// ══════════════════════════════════════════
-//  VARIABLES GLOBALES
-// ══════════════════════════════════════════
 let reunions = [], selReu = null, selCourse = null;
 let participants = [], checked = new Set(), arrivee = null;
 let refreshTimer = null, countdown = 20, isToday = true;
 let sortCol = 'num', sortAsc = true;
-let recordsKm = {}, pronoCacheMap = {}, turfbzhCache = {}, valeursCache = {}, cotesMatinData = {};
+let recordsKm = {}, pronoCacheMap = {};
 let filtreDate = 'today';
-let ticketInterval = null;
-
 const API = window.location.origin;
 
+// ✅ FONCTION CORRIGÉE - RETOURNE YYYYMMDD !
 function ds() {
   const d = document.getElementById('date-picker')?.value;
-  if (!d || filtreDate === 'today') return new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).split('/').join('').replace(/(\d{2})(\d{2})(\d{4})/,'$1$2$3');
+  if (!d || filtreDate === 'today') {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth()+1).padStart(2,'0');
+    const dd = String(today.getDate()).padStart(2,'0');
+    return y + m + dd; // YYYYMMDD
+  }
   const [y,m,dd] = d.split('-');
-  return dd+m+y;
+  return y + m + dd; // YYYYMMDD
 }
 
 function api(path) { return API + '/api' + path; }
 
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date();
   const y = today.getFullYear();
@@ -665,128 +290,9 @@ function switchTab(tab) {
   document.getElementById('tab-musique').className = 'tab-btn' + (tab === 'musique' ? ' active' : '');
   document.getElementById('page-rapports').style.display = tab === 'rapports' ? 'flex' : 'none';
   document.getElementById('tab-rapports').className = 'tab-btn' + (tab === 'rapports' ? ' active' : '');
-  if (tab === 'musique') renderMusique();
   if (tab === 'rapports') loadRapports();
 }
 
-function parseMusique(musique) {
-  if (!musique || musique === '—') return [];
-  // Extraire les chiffres et lettres : 1a, 2a, Da, 0a, (25)1a etc.
-  // On cherche les résultats : chiffres 0-9 ou D (disqualifié) avant a/p/m/h
-  const resultats = [];
-  const str = musique.replace(/\(\d+\)/g, ''); // retirer les (25) etc.
-  const matches = str.match(/[0-9Ddsm]/g) || [];
-  for (const m of matches) {
-    const n = parseInt(m);
-    if (!isNaN(n)) resultats.push(n);
-    // D = disqualifié, on ignore
-  }
-  return resultats;
-}
-
-function renderMusique() {
-  const container = document.getElementById('musique-content');
-  if (!container) return;
-
-  if (!participants.length || !selCourse) {
-    container.innerHTML = '<div class="empty"><div class="ico">🎵</div><div class="tit">Sélectionnez une course</div></div>';
-    return;
-  }
-
-  const MIN_COURSES = 4;
-  const scores = [];
-
-  // Vérifier d'abord si TOUS les chevaux ont au moins MIN_COURSES
-  const partants = participants.filter(p => !p.nonPartant);
-  const insuffisants = partants.filter(p => parseMusique(p.musique).length < MIN_COURSES);
-
-  if (insuffisants.length > 0) {
-    container.innerHTML = '<div class="empty"><div class="ico">🎵</div>'
-      + '<div class="tit">Analyse impossible</div>'
-      + '<div class="sub">' + insuffisants.length + ' cheval(aux) ont moins de ' + MIN_COURSES + ' courses en musique :<br>'
-      + insuffisants.map(p => 'N°' + p.numPmu + ' ' + p.nom + ' (' + parseMusique(p.musique).length + ' course' + (parseMusique(p.musique).length > 1 ? 's' : '') + ')').join(', ')
-      + '</div></div>';
-    return;
-  }
-
-  for (const p of partants) {
-    const resultats = parseMusique(p.musique);
-    const nb = resultats.length;
-
-    const nb1 = resultats.filter(r => r === 1).length;
-    const nb2 = resultats.filter(r => r === 2).length;
-    const nb3 = resultats.filter(r => r === 3).length;
-    const nbPodium = nb1 + nb2 + nb3;
-    const score = nb1 * 3 + nb2 * 2 + nb3 * 1;
-    const pctPodium = Math.round(nbPodium / nb * 100);
-    const pctVictoire = Math.round(nb1 / nb * 100);
-
-    scores.push({
-      num: p.numPmu, nom: p.nom,
-      nb, nb1, nb2, nb3, nbPodium,
-      score, pctPodium, pctVictoire,
-      cote: cote(p),
-      musique: p.musique || '—',
-    });
-  }
-
-  if (!scores.length) {
-    container.innerHTML = '<div class="empty"><div class="ico">🎵</div><div class="tit">Pas assez de données</div></div>';
-    return;
-  }
-
-  // Trier par score décroissant
-  scores.sort((a, b) => b.score - a.score || b.nb1 - a.nb1);
-
-  const maxScore = scores[0].score || 1;
-
-  let html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)">'
-    + '<table style="width:100%;font-size:13px">'
-    + '<thead><tr style="background:var(--surface2);font-size:11px;text-transform:uppercase;color:var(--text3)">'
-    + '<th style="padding:10px 14px">Rang</th>'
-    + '<th style="padding:10px 14px">N°</th>'
-    + '<th style="padding:10px 14px">Cheval</th>'
-    + '<th style="padding:10px 14px;text-align:center">Courses</th>'
-    + '<th style="padding:10px 14px;text-align:center;color:var(--green)">1er</th>'
-    + '<th style="padding:10px 14px;text-align:center;color:var(--text2)">2e</th>'
-    + '<th style="padding:10px 14px;text-align:center;color:var(--orange)">3e</th>'
-    + '<th style="padding:10px 14px;text-align:center">% Victoire</th>'
-    + '<th style="padding:10px 14px;text-align:center">% Podium</th>'
-    + '<th style="padding:10px 14px;text-align:center">Score</th>'
-    + '<th style="padding:10px 14px;text-align:center">Cote</th>'
-    + '</tr></thead><tbody>';
-
-  scores.forEach((s, i) => {
-    const rang = i + 1;
-    const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : rang;
-    const bg = rang === 1 ? 'background:#fef9c3' : rang === 2 ? 'background:#f3f4f6' : rang === 3 ? 'background:#fef3e8' : '';
-    const barW = Math.round(s.score / maxScore * 100);
-
-    html += '<tr style="' + bg + '">'
-      + '<td style="padding:10px 14px;font-size:16px;text-align:center">' + medal + '</td>'
-      + '<td style="padding:10px 14px"><span class="npill">' + s.num + '</span></td>'
-      + '<td style="padding:10px 14px;font-weight:600">' + s.nom
-      +   '<div style="margin-top:4px;height:4px;background:var(--surface2);border-radius:2px">'
-      +     '<div style="height:4px;width:' + barW + '%;background:var(--accent);border-radius:2px"></div>'
-      +   '</div></td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + s.nb + '</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:700;color:var(--green)">' + s.nb1 + '</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:600;color:var(--text2)">' + s.nb2 + '</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:600;color:var(--orange)">' + s.nb3 + '</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + s.pctVictoire + '%</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + s.pctPodium + '%</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:700;color:var(--accent)">' + s.score + 'pts</td>'
-      + '<td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + (s.cote < 900 ? s.cote.toFixed(1) : '—') + '</td>'
-      + '</tr>';
-  });
-
-  html += '</tbody></table></div>';
-  container.innerHTML = html;
-}
-
-// ══════════════════════════════════════════
-//  DATE
-// ══════════════════════════════════════════
 function changeDate(val) {
   if (val === 'today') {
     filtreDate = 'today';
@@ -795,739 +301,127 @@ function changeDate(val) {
     document.getElementById('date-picker').value = today.toISOString().slice(0,10);
     document.getElementById('btn-today').style.display = 'none';
     document.getElementById('archive-badge').style.display = 'none';
-    document.getElementById('live-badge').style.display = '';
-  } else {
-    filtreDate = val;
-    const today = new Date().toISOString().slice(0,10);
-    isToday = val === today;
-    document.getElementById('btn-today').style.display = isToday ? 'none' : '';
-    document.getElementById('archive-badge').style.display = isToday ? 'none' : '';
-    document.getElementById('live-badge').style.display = isToday ? '' : 'none';
   }
-  recordsKm = {}; pronoCacheMap = {}; turfbzhCache = {}; valeursCache = {}; valeursCache = {};
   reunions = []; selReu = null; selCourse = null;
   participants = []; checked = new Set();
-  document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">🏁</div><div class="tit">Sélectionnez une réunion</div></div>';
   loadReunions();
 }
 
-// ══════════════════════════════════════════
-//  RÉUNIONS
-// ══════════════════════════════════════════
 async function loadReunions() {
   document.getElementById('rbar').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
-  document.getElementById('sb').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   try {
     const r = await fetch(api(`/programme/${ds()}?specialisation=INTERNET`));
     const data = await r.json();
     reunions = (data.programme?.reunions || []).map(reu => ({
       numR: reu.numOfficiel || reu.numOrdre,
       hippo: reu.hippodrome?.libelleCourt || '?',
-      pays: reu.hippodrome?.pays?.code || 'FRA',
-      discipline: reu.disciplines?.[0] || reu.discipline || '',
       courses: (reu.courses || []).map(c => ({
         numC: c.numOrdre,
         libelle: c.libelle || '',
-        heure: c.heureDepart ? formatHeure(c.heureDepart) : '',
+        heure: c.heureDepart ? new Date(c.heureDepart).toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '',
         numR: reu.numOfficiel || reu.numOrdre,
         hippo: reu.hippodrome?.libelleCourt || '?',
-        pays: reu.hippodrome?.pays?.code || 'FRA',
-        discipline: c.discipline || c.specialite || '',
-        typePiste: c.typePiste || '',
-        nbPartants: c.nombreDeclaresPartants || 0,
-        montantPrix: c.montantPrix || 0,
-        distance: c.distance || 0,
-        conditions: c.conditions || '',
       }))
     }));
-    renderReuBar();
+    const bar = document.getElementById('rbar');
+    bar.innerHTML = reunions.map(r => `<button class="reu-btn ${selReu?.numR === r.numR ? 'active' : ''}" onclick="selectReu(${r.numR})"><span class="reu-num">R${r.numR}</span><span class="reu-name">${r.hippo}</span></button>`).join('');
     if (reunions.length > 0) selectReu(reunions[0]);
   } catch(e) {
-    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red);font-size:13px">❌ Erreur: ${e.message}</div>`;
+    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red)">❌ ${e.message}</div>`;
   }
-}
-
-function formatDiscipline(d) {
-  const map = {
-    'PLAT': '🏇 Plat', 'TROT_ATTELE': '🐎 Trot Attelé', 'TROT_MONTE': '🏇 Trot Monté',
-    'OBSTACLE': '🚧 Obstacle', 'HAIES': '🌿 Haies', 'STEEPLE': '🏔 Steeple',
-    'CROSS': '🌲 Cross', 'MONTE': '🏇 Monté', 'ATTELE': '🐎 Attelé'
-  };
-  return map[d] || d;
-}
-
-function formatHeure(ts) {
-  if (!ts) return '';
-  const d = new Date(ts);
-  return d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
-}
-
-function renderReuBar() {
-  const bar = document.getElementById('rbar');
-  if (!reunions.length) { bar.innerHTML = '<div style="padding:1rem;color:var(--text3)">Aucune réunion</div>'; return; }
-  bar.innerHTML = reunions.map(r => `
-    <button class="reu-btn ${selReu?.numR === r.numR ? 'active' : ''}" onclick="selectReu(${r.numR})">
-      <span class="reu-num">R${r.numR}</span>
-      <span class="reu-name">${r.hippo}</span>
-      ${r.pays !== 'FRA' ? '<span class="reu-pays">'+r.pays+'</span>' : ''}
-    </button>
-  `).join('');
-}
-
-function selectAllCourses() {
-  selReu = 'all';
-  selCourse = null;
-  checked = new Set();
-  arrivee = null;
-  renderReuBar();
-
-  // Collecter toutes les courses triées par heure
-  const toutes = [];
-  reunions.forEach(r => {
-    (r.courses || []).forEach(c => {
-      toutes.push({...c, numR: r.numR, hippo: r.hippo});
-    });
-  });
-  toutes.sort((a, b) => {
-    if (!a.heure && !b.heure) return 0;
-    if (!a.heure) return 1;
-    if (!b.heure) return -1;
-    return a.heure.localeCompare(b.heure);
-  });
-
-  // Stocker globalement pour accès par index
-  window._toutesLesCourses = toutes;
-
-  const sb = document.getElementById('sb');
-  sb.innerHTML = toutes.map((c, i) => '<button class="course-btn" data-idx="' + i + '">'
-    + '<span class="c-num" style="min-width:44px">R' + c.numR + 'C' + c.numC + '</span>'
-    + '<span class="c-info">'
-    + '<span class="c-lib">' + c.libelle + '</span>'
-    + '<span class="c-heure" style="display:flex;gap:4px">'
-    + (c.heure ? '<span>' + c.heure + '</span>' : '')
-    + '<span style="color:var(--text3)">' + c.hippo + '</span>'
-    + '</span></span></button>'
-  ).join('');
-
-  sb.querySelectorAll('.course-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const idx = parseInt(this.getAttribute('data-idx'));
-      const c = window._toutesLesCourses[idx];
-      if (!c) return;
-      const reu = reunions.find(r => r.numR === c.numR);
-      if (!reu) return;
-      const course = reu.courses.find(x => x.numC === c.numC);
-      if (course) selectCourse(course);
-    });
-  });
-
-  document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">📋</div><div class="tit">' + toutes.length + ' courses aujourd\'hui</div><div class="sub">Sélectionnez une course dans la liste</div></div>';
 }
 
 function selectReu(numROrObj) {
   const reu = typeof numROrObj === 'number' ? reunions.find(r => r.numR === numROrObj) : numROrObj;
   if (!reu) return;
   selReu = reu;
-  renderReuBar();
-  renderSidebar();
-  if (reu.courses.length > 0) selectCourse(reu.courses[0]);
-}
-
-function renderSidebar() {
-  if (!selReu) return;
   const sb = document.getElementById('sb');
-  sb.innerHTML = selReu.courses.map((c, i) => `
-    <button class="course-btn ${selCourse?.numC === c.numC && selCourse?.numR === c.numR ? 'active' : ''}"
-      onclick="selectCourseByIdx(${selReu.numR}, ${i})">
-      <span class="c-num">C${c.numC}</span>
-      <span class="c-info">
-        <span class="c-lib">${c.libelle}</span>
-        ${c.heure ? '<span class="c-heure">'+c.heure+'</span>' : ''}
-      </span>
-    </button>
-  `).join('');
+  sb.innerHTML = reu.courses.map((c, i) => `<button class="course-btn ${selCourse?.numC === c.numC ? 'active' : ''}" onclick="selectCourse(${reu.numR}, ${i})"><span class="c-num">C${c.numC}</span><span class="c-info"><span class="c-lib">${c.libelle}</span>${c.heure ? '<span class="c-heure">'+c.heure+'</span>' : ''}</span></button>`).join('');
+  if (reu.courses.length > 0) selectCourse(reu.numR, 0);
 }
 
-function selectCourseByIdx(numR, idx) {
+async function selectCourse(numR, idx) {
   const reu = reunions.find(r => r.numR === numR);
   if (!reu || !reu.courses[idx]) return;
-  selectCourse(reu.courses[idx]);
-}
-
-// ══════════════════════════════════════════
-//  COURSE
-// ══════════════════════════════════════════
-async function selectCourse(c) {
+  const c = reu.courses[idx];
   selCourse = c;
   checked = new Set();
-  arrivee = null;
-  renderSidebar();
   document.getElementById('panel').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
-  updateStats();
-  await loadParticipants(c);
-  await Promise.all([loadParisTurf(c.numR, c.numC), loadArrivee(c), loadRecordsKm(c)]);
-}
-
-async function loadParticipants(c) {
   try {
-    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/participants?specialisation=INTERNET'));
+    const r = await fetch(api(`/programme/${ds()}/R${c.numR}/C${c.numC}/participants?specialisation=INTERNET`));
     const data = await r.json();
     participants = (data.participants || []).filter(p => !p.nonPartant);
-    // Si le panel est déjà affiché, juste mettre à jour les rows sans tout réinitialiser
-    const body = document.getElementById('tbl-body');
-    if (body) {
-      renderRows();
-    } else {
-      renderPanel(c);
-    }
-  } catch(e) {
-    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur de chargement</div></div>';
-  }
-}
-
-// ══════════════════════════════════════════
-//  PARIS-TURF
-// ══════════════════════════════════════════
-async function loadParisTurf(numR, numC) {
-  const key = `R${numR}C${numC}`;
-  if (pronoCacheMap[key] !== undefined) return;
-  pronoCacheMap[key] = null;
-  try {
-    const r = await fetch(`/paristurf/${ds()}/${key}`);
-    const txt = await r.text();
-    if (txt && !txt.startsWith('<')) {
-      pronoCacheMap[key] = JSON.parse(txt);
-    }
-  } catch(e) {}
-  renderRows();
-}
-
-// ══════════════════════════════════════════
-//  TURF.BZH IA
-// ══════════════════════════════════════════
-async function loadTurfBzh(c) {
-  const key = `R${c.numR}C${c.numC}`;
-  if (turfbzhCache[key]) return turfbzhCache[key];
-  try {
-    const r = await fetch(`/turfbzh/${ds()}/${key}`);
-    if (!r.ok) return null;
-    const txt = await r.text();
-    if (!txt || txt.startsWith('<')) return null;
-    const data = JSON.parse(txt);
-    const hasIA = data?.ia?.some(x => x.iaGagnant !== null && x.iaGagnant !== 0);
-    const hasEnjeux = data?.enjeux_gagnant?.length > 0;
-    if (hasIA) {
-      turfbzhCache[key] = data;
-    } else if (hasEnjeux) {
-      turfbzhCache[key + '_enjeux'] = data;
-    }
+    const panel = document.getElementById('panel');
+    panel.innerHTML = `<div class="c-header"><div class="c-title">R${c.numR}C${c.numC} — ${c.libelle}</div></div><div class="tbl-wrap"><table><thead><tr><th>N°</th><th>Cheval</th><th>Cote</th></tr></thead><tbody id="tbl-body"></tbody></table></div>`;
     renderRows();
-    return data;
-  } catch(e) { return null; }
-}
-
-// ══════════════════════════════════════════
-//  ARRIVÉE
-// ══════════════════════════════════════════
-async function loadArrivee(c) {
-  try {
-    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/participants?specialisation=INTERNET'));
-    const data = await r.json();
-    const parts = data.participants || [];
-    const arrived = parts.filter(p => p.ordreArrivee).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
-    arrivee = arrived.length > 0 ? arrived : null;
-    renderArrivee();
-  } catch(e) {}
-}
-
-// ══════════════════════════════════════════
-//  RECORDS KM
-// ══════════════════════════════════════════
-async function loadRecordsKm(c) {
-  if (!selCourse) return;
-  const key = `R${c.numR}C${c.numC}`;
-  if (recordsKm._key === key) return; // Déjà chargé pour cette course
-  try {
-    const names = participants.map((p,i) => `${p.numPmu}=${encodeURIComponent(p.nom)}`).join('&');
-    const r = await fetch(`/records/${ds()}/${key}?${names}`);
-    const txt = await r.text();
-    if (txt && !txt.startsWith('<')) {
-      recordsKm = JSON.parse(txt);
-      recordsKm._key = key;
-      console.log('Records Turfoo:', recordsKm);
-      renderRows();
-    }
-  } catch(e) {}
-}
-
-// ══════════════════════════════════════════
-//  VALEURS HANDICAP
-// ══════════════════════════════════════════
-async function loadValeursHandicap(c) {
-  const discipline = c.discipline || selReu?.discipline || '';
-  const isMonte = discipline.includes('MONTE');
-  console.log('[DEBUG] loadValeursHandicap appelé, discipline=', discipline, 'isToday=', isToday);
-  if (!isToday || isMonte) return;
-  const key = `R${c.numR}C${c.numC}`;
-  if (valeursCache[key]) { renderRows(); return; }
-  try {
-    const r = await fetch(`/valeurs/${ds()}/${key}`);
-    const txt = await r.text();
-    if (txt && !txt.startsWith('<')) {
-      valeursCache[key] = JSON.parse(txt);
-      renderRows();
-    }
-  } catch(e) {}
-}
-
-// ══════════════════════════════════════════
-//  RENDER PANEL
-// ══════════════════════════════════════════
-function renderPanel(c) {
-  const panel = document.getElementById('panel');
-  panel.innerHTML = `
-    <div class="c-header">
-      <div class="c-title">R${c.numR}C${c.numC} — ${c.libelle}</div>
-      <div class="tags">
-        ${c.heure ? '<span class="tag bl">'+c.heure+'</span>' : ''}
-        ${c.distance ? '<span class="tag">'+c.distance+'m</span>' : ''}
-        ${c.nbPartants ? '<span class="tag">'+c.nbPartants+' partants</span>' : ''}
-        ${c.discipline ? '<span class="tag">'+formatDiscipline(c.discipline)+'</span>' : ''}
-        ${c.typePiste ? '<span class="tag">'+c.typePiste+'</span>' : ''}
-        ${c.montantPrix ? '<span class="tag">'+(c.montantPrix/1000).toFixed(0)+'k€</span>' : ''}
-      </div>
-    </div>
-    <div id="paris-turf-bar"></div>
-    <div id="arrivee-bar" class="arrivee-bar"></div>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="chk-col"><input type="checkbox" id="chk-all" onchange="toggleAll(this.checked)"></th>
-            <th class="sortable" id="th-num" onclick="setSort('num')">N° <span class="sort-icon">↑</span></th>
-            <th>Cheval</th>
-            <th>Musique</th>
-            <th class="sortable" id="th-cote" onclick="setSort('cote')">Cote live <span class="sort-icon"></span></th>
-            <th>Cote P <span style="font-weight:400;color:var(--text3)">(Est.)</span></th>
-            <th class="sortable" id="th-record" onclick="setSort('record')">Record km <span class="sort-icon"></span></th>
-            <th>Mise (€)</th>
-            <th>Gain net</th>
-          </tr>
-        </thead>
-        <tbody id="tbl-body"></tbody>
-      </table>
-    </div>
-  `;
-  renderRows();
-  loadPronos(c);
-  renderArrivee();
-}
-
-// ══════════════════════════════════════════
-//  TRI
-// ══════════════════════════════════════════
-function setSort(col) {
-  if (sortCol === col) sortAsc = !sortAsc;
-  else { sortCol = col; sortAsc = col === 'num'; }
-  ['num','cote','record','enjeux'].forEach(c => {
-    const th = document.getElementById('th-'+c);
-    if (!th) return;
-    th.className = 'sortable' + (sortCol === c ? ' active' : '');
-    const icon = th.querySelector('.sort-icon');
-    if (icon) icon.textContent = sortCol === c ? (sortAsc ? '↑' : '↓') : '';
-  });
-  renderRows();
-}
-
-function cote(p) {
-  const c = p.dernierRapportDirect || {};
-  const r = p.dernierRapportReference || {};
-  return parseFloat(c.rapport || r.rapport) || 999;
-}
-
-// ══════════════════════════════════════════
-//  RENDER ROWS
-// ══════════════════════════════════════════
-function renderTurfBzhIA(p) {
-  const tbzKey = `R${selCourse?.numR}C${selCourse?.numC}`;
-  const tbzData = turfbzhCache[tbzKey] || turfbzhCache[tbzKey + '_enjeux'] || null;
-  if (!tbzData?.ia?.length) return '<span style="color:var(--text3)">—</span>';
-  const ia = tbzData.ia.find(x => x.num === p.numPmu);
-  if (!ia || ia.iaGagnant === null || ia.iaGagnant === undefined || ia.iaGagnant === 0) return '<span style="color:var(--text3)">—</span>';
-  const sorted = [...tbzData.ia].filter(x => x.iaGagnant !== null && x.iaGagnant !== 0).sort((a,b) => b.iaGagnant - a.iaGagnant);
-  const rank = sorted.findIndex(x => x.num === p.numPmu) + 1;
-  const color = rank === 1 ? '#7c3aed' : rank === 2 ? '#a855f7' : rank === 3 ? '#c084fc' : 'var(--text3)';
-  return `<span style="font-weight:700;color:${color}">${ia.iaGagnant}%</span><span style="color:var(--text3);font-size:10px"> #${rank}</span>`;
-}
-
-function renderTurfBzhEnjeux(p) {
-  const tbzKey = `R${selCourse?.numR}C${selCourse?.numC}`;
-  const tbzData = turfbzhCache[tbzKey] || turfbzhCache[tbzKey + '_enjeux'] || null;
-  if (!tbzData?.enjeux_gagnant?.length) return '<span style="color:var(--text3)">—</span>';
-  const e = tbzData.enjeux_gagnant.find(x => x.num === p.numPmu);
-  if (!e) return '<span style="color:var(--text3)">—</span>';
-  const pct = parseFloat(e.pct);
-  const color = pct >= 30 ? 'var(--red)' : pct >= 15 ? 'var(--orange)' : 'var(--green)';
-  const rank = tbzData.enjeux_gagnant.findIndex(x => x.num === p.numPmu) + 1;
-  return `<span style="font-weight:700;color:${color}">${e.pct}</span><span style="color:var(--text3);font-size:10px"> #${rank}</span>`;
-}
-
-function renderRecord(p) {
-  const rec = recordsKm[p.numPmu];
-  if (!rec) return '<span class="record-na">—</span>';
-  return `<span class="record-km">${rec}</span>`;
-}
-
-function renderValeursHandicap(p) {
-  const key = `R${selCourse?.numR}C${selCourse?.numC}`;
-  const data = valeursCache[key];
-  if (!data) return '<span style="color:var(--text3)">—</span>';
-  const val = data[p.numPmu];
-  if (!val) return '<span style="color:var(--text3)">—</span>';
-  return `<span style="font-family:var(--mono);font-size:12px">${val}</span>`;
+  } catch(e) {
+    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur</div></div>';
+  }
 }
 
 function renderRows() {
   const body = document.getElementById('tbl-body');
   if (!body || !participants.length) return;
-
-  const budget = parseFloat(document.getElementById('budget')?.value || 20);
-  const nbChecked = checked.size;
-  const sumInv = nbChecked > 0 ? [...checked].reduce((s, num) => {
-    const p = participants.find(x => x.numPmu === num);
-    return s + (p ? 1 / (cote(p) || 1) : 0);
-  }, 0) : 0;
-
-  const roundMode = document.getElementById('round-mode')?.value || 'nearest';
-  function roundMise(v) {
-    if (roundMode === 'down') return Math.floor(v);
-    if (roundMode === 'up') return Math.ceil(v);
-    if (roundMode === 'nearest') return Math.round(v);
-    return parseFloat(v.toFixed(2));
-  }
-
-  // Trier
-  const sorted = [...participants].sort((a, b) => {
-    let va, vb;
-    if (sortCol === 'num') { va = a.numPmu; vb = b.numPmu; }
-    else if (sortCol === 'cote') { va = cote(a) || 9999; vb = cote(b) || 9999; }
-    else if (sortCol === 'record') {
-      const toN = s => {
-        if (!s) return 9999;
-        const m = s.match(/(\d+)'(\d+)"(\d+)/);
-        return m ? parseInt(m[1])*6000 + parseInt(m[2])*100 + parseInt(m[3]) : 9999;
-      };
-      va = toN(recordsKm[a.numPmu]); vb = toN(recordsKm[b.numPmu]);
-    }
-    else if (sortCol === 'enjeux') {
-      const tbzKey = `R${selCourse?.numR}C${selCourse?.numC}`;
-      const _tbz = turfbzhCache[tbzKey] || turfbzhCache[tbzKey + '_enjeux'] || null;
-      const ea = _tbz?.enjeux_gagnant?.find(x => x.num === a.numPmu);
-      const eb = _tbz?.enjeux_gagnant?.find(x => x.num === b.numPmu);
-      va = parseFloat(ea?.pct) || 0; vb = parseFloat(eb?.pct) || 0;
-    }
-    else { va = a.numPmu; vb = b.numPmu; }
-    return sortAsc ? va - vb : vb - va;
-  });
-
-  const pronos = pronoCacheMap[`R${selCourse?.numR}C${selCourse?.numC}`];
-
-  body.innerHTML = sorted.map(p => {
-    const num = p.numPmu;
-    const isChecked = checked.has(num);
-    const c_val = cote(p);
-    const coteStr = c_val < 900 ? c_val.toFixed(1) : '—';
-    const mise = (isChecked && nbChecked > 0 && sumInv > 0) ? roundMise(budget / (c_val * sumInv)) : 0;
-    const miseReel = (isChecked && nbChecked > 0 && sumInv > 0) ? budget / (c_val * sumInv) : 0;
-    const gainNet = isChecked && miseReel > 0 ? ((miseReel * c_val) - budget).toFixed(2) : '—';
-    const miseAff = isChecked && miseReel > 0 ? (mise > 0 ? mise + '€' : '<1€') : '—';
-    const coteP = p.dernierRapportDirect ? (parseFloat(p.dernierRapportDirect.rapport || 0) / 4).toFixed(1) : '—';
-
-    // Musique
-    const mus = p.gainsCarriere ? `${p.gainsCarriere}` : (p.musique || '');
-
-    const ordre = p.ordreArrivee;
-    const ordreHtml = ordre ? `<span class="ordre-badge ${ordre===1?'o1':ordre===2?'o2':ordre===3?'o3':''}" style="margin-right:4px">${ordre}</span>` : '';
-
-    // Prono PT
-    let pronoHtml = '';
-
-    return `<tr class="${isChecked ? 'sel' : ''}" onclick="toggleCheck(${num})">
-      <td class="chk-col" onclick="event.stopPropagation()">
-        <input type="checkbox" ${isChecked?'checked':''} onchange="toggleCheck(${num})">
-      </td>
-      <td style="text-align:center">
-        <span class="npill">${num}</span>
-        ${ordre ? '<div style="font-size:10px;font-weight:700;margin-top:2px;color:'+(ordre===1?'#b45309':ordre===2?'#6b7280':ordre===3?'#ea580c':'var(--text3)')+'">'+( ordre===1?'🥇':ordre===2?'🥈':ordre===3?'🥉':ordre+'e')+'</div>' : ''}
-      </td>
-      <td>
-        <div class="hnom">${p.nom} ${pronoHtml}</div>
-        <div class="hsub">${p.driver||p.jockey||''} ${p.entraineur?'· '+p.entraineur:''}</div>
-      </td>
-      <td><div class="mus">${p.musique||'—'}</div></td>
-      <td>
-        <span class="cote-num">${coteStr}</span>
-        ${isToday && c_val < 900 ? '<span class="ldot"></span>' : ''}
-      </td>
-      <td><span style="font-size:11px;color:var(--text2)">${coteP !== '—' ? coteP : '—'}</span></td>
-      <td style="font-family:var(--mono);font-size:11px">${renderRecord(p)}</td>
-      <td><span class="mise-num">${miseAff}</span></td>
-      <td><span class="gain-num" style="color:${gainNet!=='—'?(parseFloat(gainNet)>=0?'var(--green)':'var(--red)'):'var(--text3)'}">${gainNet !== '—' ? (parseFloat(gainNet)>=0?'+':'')+gainNet+'€' : '—'}</span></td>
-    </tr>`;
-  }).join('');
-
-  updateStats();
+  body.innerHTML = participants.map(p => `<tr><td>${p.numPmu}</td><td>${p.nom}</td><td>${(parseFloat(p.dernierRapportDirect?.rapport || 999)).toFixed(1)}</td></tr>`).join('');
 }
 
-// ══════════════════════════════════════════
-//  SÉLECTION
-// ══════════════════════════════════════════
 function toggleCheck(num) {
   if (checked.has(num)) checked.delete(num);
   else checked.add(num);
-  renderRows();
-  updateTicketBtn();
 }
 
 function toggleAll(v) {
   if (v) participants.forEach(p => checked.add(p.numPmu));
   else checked.clear();
-  renderRows();
-  updateTicketBtn();
 }
 
-function updateTicketBtn() {
-  const btn = document.getElementById('btn-ticket');
-  if (btn) btn.style.display = checked.size > 0 ? 'flex' : 'none';
-}
+function updateStats() {}
 
-function updateStats() {
-  const nb = checked.size;
-  document.getElementById('s-nb').textContent = nb;
-  if (nb === 0) {
-    document.getElementById('s-bud').textContent = '—';
-    document.getElementById('s-gain').textContent = '—';
-    document.getElementById('s-rent').textContent = '—';
-    return;
-  }
-  const budget = parseFloat(document.getElementById('budget')?.value || 20);
-  const roundMode = document.getElementById('round-mode')?.value || 'nearest';
-  function roundMise(v) {
-    if (roundMode === 'down') return Math.floor(v);
-    if (roundMode === 'up') return Math.ceil(v);
-    if (roundMode === 'nearest') return Math.round(v);
-    return parseFloat(v.toFixed(2));
-  }
-  const checked_parts = [...checked].map(num => participants.find(p => p.numPmu === num)).filter(Boolean);
-  const sumInv = checked_parts.reduce((s, p) => s + 1/(cote(p)||1), 0);
-  let totalMise = 0;
-  checked_parts.forEach(p => { totalMise += roundMise(budget / (cote(p) * sumInv)); });
-  const gainTheoriqueNet = budget - totalMise;
-  document.getElementById('s-bud').textContent = totalMise + '€';
-  document.getElementById('s-gain').textContent = (gainTheoriqueNet >= 0 ? '+' : '') + gainTheoriqueNet.toFixed(2) + '€';
-  const rentable = gainTheoriqueNet >= 0;
-  const rentEl = document.getElementById('s-rent');
-  rentEl.textContent = rentable ? '✓ Oui' : '✗ Non';
-  rentEl.className = 'stat-val ' + (rentable ? 'green' : 'red');
-}
-
-// ══════════════════════════════════════════
-//  ARRIVÉE
-// ══════════════════════════════════════════
-function renderArrivee() {
-  const bar = document.getElementById('arrivee-bar');
-  if (!bar) return;
-
-  if (!arrivee || !arrivee.length) {
-    bar.innerHTML = '<div class="arrivee-title">'
-      + '<span class="arrivee-dot"></span>Arrivée définitive</div>'
-      + '<div class="arrivee-pending">'
-      + '<div class="spin" style="width:12px;height:12px;border-width:2px;margin-right:6px"></div>'
-      + 'En attente de l\'arrivée...</div>';
-    return;
-  }
-
-  var top = arrivee.slice(0, 5);
-  var chips = top.map(function(p) {
-    var ordre = p.ordreArrivee;
-    var cls = ordre === 1 ? 'p1' : ordre === 2 ? 'p2' : ordre === 3 ? 'p3' : '';
-    var medal = ordre === 1 ? '🥇' : ordre === 2 ? '🥈' : ordre === 3 ? '🥉' : ordre + 'e';
-    var isSel = checked.has(p.numPmu) ? ' sel' : '';
-    var coteG = (p.dernierRapportDirect && parseFloat(p.dernierRapportDirect.rapport) > 0)
-      ? ' @' + parseFloat(p.dernierRapportDirect.rapport).toFixed(1) : '';
-    return '<div class="pos-chip ' + cls + isSel + '">'
-      + '<span class="pos-num">' + medal + '</span>'
-      + '<span class="pos-horse">N°' + p.numPmu + ' ' + p.nom + '</span>'
-      + (coteG ? '<span class="pos-cote">' + coteG + '</span>' : '')
-      + '</div>';
-  }).join('');
-
-  bar.innerHTML = '<div class="arrivee-title">'
-    + '<span class="arrivee-dot red"></span>Arrivée officielle</div>'
-    + '<div class="positions">' + chips + '</div>';
-}
-
-// ══════════════════════════════════════════
-//  PRONOS PARIS-TURF
-// ══════════════════════════════════════════
-async function loadPronos(c) {
-  const key = `R${c.numR}C${c.numC}`;
-  try {
-    const r = await fetch('/paristurf/' + ds() + '/' + key);
-    const txt = await r.text();
-    if (!txt || txt.startsWith('<')) return;
-    const data = JSON.parse(txt);
-    pronoCacheMap[key] = data;
-    if (data && data.tips && data.tips.length) {
-      const chips = data.tips.slice(0,5).map(function(t, i) {
-        return '<div class="eq-chip ' + (i===0?'base':'') + '" onclick="toggleCheck(' + t.num + ')">'
-          + '<span class="eq-pos">#' + t.rang + '</span>'
-          + '<span class="eq-num">' + t.num + '</span>'
-          + '<span>' + (t.nom||'') + '</span>'
-          + '</div>';
-      }).join('');
-      const ptBar = document.getElementById('paris-turf-bar');
-      if (ptBar) {
-        ptBar.innerHTML = '<div class="equidia-bar" style="margin-bottom:8px">'
-          + '<div class="equidia-title"><div class="equidia-logo">📰 Pronos</div></div>'
-          + '<div class="equidia-chips">' + chips + '</div>'
-          + '</div>';
-      }
-      renderRows();
-    }
-  } catch(e) { console.warn('loadPronos:', e); }
-}
-
-// ══════════════════════════════════════════
-//  VALIDER PARI
-// ══════════════════════════════════════════
-async function validerPari() {
-  if (!checked.size || !selCourse) return;
-  const budget = parseFloat(document.getElementById('budget')?.value || 20);
-  const roundMode = document.getElementById('round-mode')?.value || 'nearest';
-  function roundMise(v) {
-    if (roundMode === 'down') return Math.floor(v);
-    if (roundMode === 'up') return Math.ceil(v);
-    if (roundMode === 'nearest') return Math.round(v);
-    return parseFloat(v.toFixed(2));
-  }
-  const checked_parts = [...checked].map(num => participants.find(p => p.numPmu === num)).filter(Boolean);
-  const sumInv = checked_parts.reduce((s, p) => s + 1/(cote(p)||1), 0);
-  const chevaux = checked_parts.map(p => ({
-    num: p.numPmu, nom: p.nom,
-    cote: cote(p),
-    mise: roundMise(budget / (cote(p) * sumInv))
-  }));
-  const pari = {
-    date: ds(), numR: selCourse.numR, numC: selCourse.numC,
-    hippo: selCourse.hippo, libelle: selCourse.libelle,
-    heure: selCourse.heure, budget,
-    chevaux, statut: 'en_attente'
-  };
-  try {
-    await fetch('/paris/save', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(pari) });
-    const bar = document.getElementById('validated-bar');
-    if (bar) {
-      bar.style.display = 'flex';
-      bar.innerHTML = `<div class="validated-bar">✅ Pari validé ! ${chevaux.length} cheval(aux) — Budget: ${budget}€</div>`;
-    }
-  } catch(e) {}
-}
-
-// ══════════════════════════════════════════
-//  TICKET LIVE
-// ══════════════════════════════════════════
-function ouvrirTicket(numR, numC) {
-  // Placeholder
-}
-
-// ══════════════════════════════════════════
-//  REFRESH
-// ══════════════════════════════════════════
 function startCountdown() {
   clearInterval(refreshTimer);
   countdown = 20;
-  refreshTimer = setInterval(async () => {
+  refreshTimer = setInterval(() => {
     countdown--;
     const el = document.getElementById('cd');
     if (el) el.textContent = countdown;
-    if (countdown <= 0) {
-      countdown = 20;
-      if (isToday && selCourse) {
-        await loadParticipants(selCourse);
-        await loadArrivee(selCourse);
-      }
-    }
+    if (countdown <= 0) countdown = 20;
   }, 1000);
 }
 
 async function manualRefresh() {
-  if (selCourse) {
-    await loadParticipants(selCourse);
-    await loadArrivee(selCourse);
-  }
   countdown = 20;
 }
 
-// ══════════════════════════════════════════
-// RAPPORTS DÉFINITIFS
-// ══════════════════════════════════════════
+// ✅ RAPPORTS DÉFINITIFS - UTILISE ds() CORRECT
 async function loadRapports() {
   const c = selCourse;
   if (!c) {
     document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div></div>';
     return;
   }
-
-  const dateInput = document.getElementById('date-picker').value;
-  const [y, m, d] = dateInput.split('-');
-  const dateStr = y + m + d;
+  const dateStr = ds(); // ✅ YYYYMMDD
   const key = `R${c.numR}C${c.numC}`;
-
-  document.getElementById('rapports-content').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-dim)">⏳ Chargement...</div>';
-
+  document.getElementById('rapports-content').innerHTML = '<div style="text-align:center;padding:2rem">⏳ Chargement...</div>';
   try {
     const r = await fetch(`/results/${dateStr}/${key}`);
     const data = await r.json();
-
-    if (data.status !== 'success' || Object.keys(data.cotes_gagnant).length === 0) {
-      document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">📋</div><div class="tit">Aucun résultat</div><div class="sub">Cette course n\'a pas de résultats définitifs</div></div>';
+    if (data.status !== 'success' || !data.cotes_gagnant || Object.keys(data.cotes_gagnant).length === 0) {
+      document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">📋</div><div class="tit">Aucun résultat</div></div>';
       return;
     }
-
-    let html = '<table style="width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">';
-    html += '<tr style="background:var(--surface2)">';
-    html += '<th style="padding:0.75rem;text-align:left;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">Pos</th>';
-    html += '<th style="padding:0.75rem;text-align:left;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">N°</th>';
-    html += '<th style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">Cote G.</th>';
-    html += '<th style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">Cote P.</th>';
-    html += '</tr>';
-
+    let html = '<table style="width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border)"><tr style="background:var(--surface2)"><th style="padding:12px">Pos</th><th style="padding:12px">N°</th><th style="padding:12px">Cote G.</th><th style="padding:12px">Cote P.</th></tr>';
     const chevaux = Object.keys(data.cotes_gagnant).sort((a,b) => parseInt(a) - parseInt(b));
     let pos = 1;
-
     for (const num of chevaux) {
       const cG = data.cotes_gagnant[num] || '—';
       const cP = data.cotes_place[num] || '—';
-      const ico = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
-      const bg = pos <= 3 ? 'background:var(--surface2);font-weight:700;' : '';
-      
-      html += `<tr style="${bg}border-bottom:1px solid var(--border)">`;
-      html += `<td style="padding:0.75rem;color:var(--accent);font-weight:700">${pos} ${ico}</td>`;
-      html += `<td style="padding:0.75rem;font-weight:700">N°${num}</td>`;
-      html += `<td style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">${cG}</td>`;
-      html += `<td style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">${cP}</td>`;
-      html += '</tr>';
+      html += `<tr style="border-bottom:1px solid var(--border)"><td style="padding:12px">${pos}</td><td style="padding:12px">N°${num}</td><td style="padding:12px;text-align:center">${cG}</td><td style="padding:12px;text-align:center">${cP}</td></tr>`;
       pos++;
     }
-
     html += '</table>';
     document.getElementById('rapports-content').innerHTML = html;
-
-    setTimeout(loadRapports, 30000);
-
   } catch (err) {
-    console.error('Error:', err);
+    console.error('Erreur:', err);
     document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur</div></div>';
   }
 }
