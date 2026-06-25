@@ -54,6 +54,8 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password = db.Column(db.String(256), nullable=False)
+    reset_token = db.Column(db.String(256), unique=True, nullable=True)
+    reset_token_expires = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
     subscription = db.relationship('Subscription', backref='user', uselist=False, cascade='all, delete-orphan')
@@ -236,6 +238,128 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('index'))
+
+# ============================================
+# PASSWORD RESET ROUTES
+# ============================================
+
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        
+        if not email:
+            return render_template('forgot_password.html', error='Email requis')
+        
+        try:
+            user = User.query.filter_by(email=email).first()
+            
+            if not user:
+                # Pour des raisons de sécurité, ne pas dire si l'email existe
+                return render_template('forgot_password.html', success='Si cet email existe, vous recevrez un lien de réinitialisation')
+            
+            # Générer un token unique
+            import secrets
+            reset_token = secrets.token_urlsafe(32)
+            user.reset_token = reset_token
+            user.reset_token_expires = datetime.now() + timedelta(hours=1)  # Expire en 1h
+            
+            db.session.commit()
+            
+            # Envoyer email avec le lien de reset
+            try:
+                if SENDGRID_API_KEY:
+                    sg = SendGridAPIClient(SENDGRID_API_KEY)
+                    
+                    reset_link = f"{request.host_url}reset-password/{reset_token}"
+                    
+                    message = Mail(
+                        from_email=SENDGRID_FROM_EMAIL,
+                        to_emails=user.email,
+                        subject='🔐 Réinitialiser votre mot de passe - Dutching Turf',
+                        plain_text_content=f"""Bonjour,
+
+Vous avez demandé à réinitialiser votre mot de passe.
+
+Cliquez sur ce lien pour créer un nouveau mot de passe (lien valide 1 heure) :
+{reset_link}
+
+Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
+
+---
+Dutching Turf Team""",
+                        html_content=f"""
+                        <html>
+                            <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
+                                <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
+                                    <h1 style="color: #667eea; margin-bottom: 20px">🔐 Réinitialiser votre mot de passe</h1>
+                                    
+                                    <p style="color: #333; font-size: 16px; line-height: 1.6">Vous avez demandé à réinitialiser votre mot de passe Dutching Turf.</p>
+                                    
+                                    <p style="color: #333; margin: 20px 0">Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+                                    
+                                    <div style="text-align: center; margin: 30px 0">
+                                        <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Réinitialiser le mot de passe</a>
+                                    </div>
+                                    
+                                    <p style="color: #666; font-size: 14px">Ce lien expire dans 1 heure.</p>
+                                    
+                                    <p style="color: #999; font-size: 12px; margin-top: 20px">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.</p>
+                                </div>
+                            </body>
+                        </html>
+                        """
+                    )
+                    
+                    sg.send(message)
+                    print(f"[EMAIL] Reset link sent to {user.email}")
+            except Exception as email_err:
+                print(f"[EMAIL ERROR] {str(email_err)}")
+            
+            return render_template('forgot_password.html', success='Si cet email existe, vous recevrez un lien de réinitialisation')
+        
+        except Exception as e:
+            print(f"[FORGOT PASSWORD ERROR] {str(e)}")
+            return render_template('forgot_password.html', error='Une erreur s\'est produite')
+    
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    try:
+        user = User.query.filter_by(reset_token=token).first()
+        
+        if not user or not user.reset_token_expires or datetime.now() > user.reset_token_expires:
+            return render_template('reset_password.html', error='Lien invalide ou expiré', token=None)
+        
+        if request.method == 'POST':
+            password = request.form.get('password', '').strip()
+            password_confirm = request.form.get('password_confirm', '').strip()
+            
+            if not password or not password_confirm:
+                return render_template('reset_password.html', error='Tous les champs sont requis', token=token)
+            
+            if password != password_confirm:
+                return render_template('reset_password.html', error='Les mots de passe ne correspondent pas', token=token)
+            
+            if len(password) < 6:
+                return render_template('reset_password.html', error='Le mot de passe doit faire au moins 6 caractères', token=token)
+            
+            # Changer le mot de passe
+            user.password = hashlib.sha256(password.encode()).hexdigest()
+            user.reset_token = None
+            user.reset_token_expires = None
+            
+            db.session.commit()
+            
+            print(f"[PASSWORD RESET] Password reset for {user.email}")
+            return render_template('reset_password.html', success='Mot de passe réinitialisé avec succès ! Vous pouvez maintenant vous connecter.')
+        
+        return render_template('reset_password.html', token=token)
+    
+    except Exception as e:
+        print(f"[RESET PASSWORD ERROR] {str(e)}")
+        return render_template('reset_password.html', error='Une erreur s\'est produite', token=None)
 
 # ============================================
 # MAIN ROUTES
