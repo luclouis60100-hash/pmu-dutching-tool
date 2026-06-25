@@ -33,10 +33,8 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
     if DATABASE_URL.startswith('postgresql://'):
         DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
-
 app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///pmu_dutching.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
 db = SQLAlchemy(app)
 
 # SendGrid configuration
@@ -50,7 +48,6 @@ STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_your_
 # ============================================
 # DATABASE MODELS
 # ============================================
-
 class User(db.Model):
     __tablename__ = 'users'
     
@@ -83,7 +80,6 @@ class Subscription(db.Model):
 # ============================================
 # CREATE TABLES
 # ============================================
-
 def init_db():
     """Initialize database tables"""
     try:
@@ -98,7 +94,6 @@ init_db()
 # ============================================
 # SCHEDULED TASKS - EMAIL REMINDERS
 # ============================================
-
 def send_expiration_reminders():
     """Envoie des rappels email 7 jours avant expiration"""
     try:
@@ -132,17 +127,11 @@ def send_expiration_reminders():
                             to_emails=user.email,
                             subject='⏰ Votre abonnement Dutching Turf expire bientôt !',
                             plain_text_content=f"""Bonjour,
-
 Votre abonnement à Dutching Turf Premium expire le {expires_at}.
-
 Pour continuer à accéder à l'analyse complète, pensez à vous réabonner !
-
 👉 Se réabonner : https://web-production-b3d28.up.railway.app/pricing
-
 Questions ? Contactez-nous : https://web-production-b3d28.up.railway.app/contact
-
 À bientôt ! 🏇
-
 ---
 Dutching Turf Team""",
                             html_content=f"""
@@ -187,7 +176,6 @@ atexit.register(lambda: scheduler.shutdown())
 # ============================================
 # AUTHENTICATION DECORATORS
 # ============================================
-
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -221,7 +209,6 @@ def premium_required(f):
 # ============================================
 # ROUTES - INDEX & LANDING PAGE
 # ============================================
-
 @app.route('/')
 def index():
     if 'user_id' in session:
@@ -242,7 +229,6 @@ def index():
 # ============================================
 # CONTACT ROUTE
 # ============================================
-
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
     return render_template('contact.html')
@@ -250,7 +236,6 @@ def contact():
 # ============================================
 # AUTH ROUTES
 # ============================================
-
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -333,7 +318,6 @@ def logout():
 # ============================================
 # PASSWORD RESET ROUTES
 # ============================================
-
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
@@ -363,14 +347,10 @@ def forgot_password():
                             to_emails=user.email,
                             subject='🔐 Réinitialiser votre mot de passe - Dutching Turf',
                             plain_text_content=f"""Bonjour,
-
 Vous avez demandé à réinitialiser votre mot de passe.
-
 Cliquez sur ce lien pour créer un nouveau mot de passe (lien valide 1 heure) :
 {reset_link}
-
 Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
-
 ---
 Dutching Turf Team""",
                             html_content=f"""
@@ -448,7 +428,6 @@ def reset_password(token):
 # ============================================
 # MAIN ROUTES
 # ============================================
-
 @app.route('/pricing')
 def pricing():
     if 'user_id' in session:
@@ -472,7 +451,6 @@ def dashboard():
 # ============================================
 # STRIPE PAYMENT ROUTES
 # ============================================
-
 @app.route('/api/create-checkout-session', methods=['POST'])
 @login_required
 def create_checkout_session():
@@ -564,20 +542,15 @@ def success():
                     to_emails=user.email,
                     subject='✅ Bienvenue à Dutching Turf Premium !',
                     plain_text_content=f"""Bonjour,
-
 Merci pour votre abonnement à Dutching Turf Premium ! 🎉
-
 🎟️ DÉTAILS DE VOTRE ABONNEMENT:
 • Montant: 9,99€
 • Durée: 30 jours
 • Expire le: {access_expires.strftime('%d/%m/%Y')}
 • Accès: Illimité au dashboard complet
-
 🚀 COMMENCEZ MAINTENANT:
 Allez sur votre dashboard pour commencer à analyser !
-
 À bientôt sur Dutching Turf! 🏇
-
 ---
 Dutching Turf Team""",
                     html_content=f"""
@@ -621,7 +594,6 @@ Dutching Turf Team""",
 # ============================================
 # API ROUTES
 # ============================================
-
 @app.route('/api/subscription-info')
 @login_required
 def subscription_info():
@@ -651,6 +623,36 @@ def subscription_info():
         print(f"[ERROR] subscription_info: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+# ============================================
+# API PROGRAMME ENDPOINT (DEDICATED)
+# ============================================
+@app.route('/api/programme/<date_str>')
+@premium_required
+def api_programme(date_str):
+    """Proxy dédié pour programme PMU avec le bon format"""
+    try:
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/programme/{date_str}"
+        if request.query_string:
+            url += '?' + request.query_string.decode('utf-8')
+        
+        print(f"[API] Proxying programme to: {url}")
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+        
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return jsonify(data)
+    except Exception as e:
+        print(f"[API ERROR] Programme proxy: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# GENERIC API PROXY (FALLBACK)
+# ============================================
 @app.route('/api/<path:path>')
 @premium_required
 def api_proxy(path):
@@ -685,7 +687,6 @@ def health():
 # ============================================
 # SCRAPING ROUTES (PREMIUM ONLY)
 # ============================================
-
 @app.route('/paristurf/<date_str>/<rc>')
 @premium_required
 def paristurf_pronos(date_str, rc):
@@ -758,7 +759,6 @@ def turfomania_pronos(date_str, rc):
 # ============================================
 # RACE RESULTS ROUTE
 # ============================================
-
 @app.route('/results/<date_str>/<rc>')
 @premium_required
 def race_results(date_str, rc):
@@ -782,7 +782,6 @@ def race_results(date_str, rc):
 # ============================================
 # ERROR HANDLERS
 # ============================================
-
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Not found'}), 404
@@ -794,7 +793,6 @@ def server_error(error):
 # ============================================
 # RUN APP
 # ============================================
-
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
