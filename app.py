@@ -2,185 +2,164 @@ from dotenv import load_dotenv
 load_dotenv()
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 import os
-from flask_sqlalchemy import SQLAlchemy
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-from sqlalchemy import func
+import json
+import sqlite3
 import stripe
 import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
 import hashlib
-import json
-import secrets
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 
-# Scraping imports
-try:
-    from scraper import get_paristurf_pronos, get_records_km, get_turfomania_pronos, get_race_results
-    SCRAPER_AVAILABLE = True
-except ImportError:
-    print("[!] Warning: scraper module not available. Some features disabled.")
-    SCRAPER_AVAILABLE = False
-
 # Configuration
-app = Flask(__name__, static_folder='templates/static', static_url_path='/static')
+app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'pmu-dutching-tool-secret-key-change-me')
-
-# Database configuration
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    if DATABASE_URL.startswith('postgresql://'):
-        DATABASE_URL = DATABASE_URL.replace('postgresql://', 'postgresql+psycopg2://', 1)
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URL or 'sqlite:///pmu_dutching.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-db = SQLAlchemy(app)
-
-# SendGrid configuration
-SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY')
-SENDGRID_FROM_EMAIL = os.environ.get('MAIL_USERNAME', 'luclouis60100@gmail.com')
 
 # Stripe configuration
 stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_your_key_here')
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_your_key_here')
 
-# ============================================
-# DATABASE MODELS
-# ============================================
-class User(db.Model):
-    __tablename__ = 'users'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password = db.Column(db.String(256), nullable=False)
-    reset_token = db.Column(db.String(256), unique=True, nullable=True)
-    reset_token_expires = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    
-    subscription = db.relationship('Subscription', backref='user', uselist=False, cascade='all, delete-orphan')
-    
-    def __repr__(self):
-        return f'<User {self.email}>'
+# SendGrid configuration
+SENDGRID_API_KEY = os.environ.get('SENDGRID_API_KEY', '')
+MAIL_USERNAME = os.environ.get('MAIL_USERNAME', 'noreply@pmu-dutching.app')
 
-class Subscription(db.Model):
-    __tablename__ = 'subscriptions'
-    
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), unique=True, nullable=False, index=True)
-    stripe_customer_id = db.Column(db.String(120))
-    stripe_subscription_id = db.Column(db.String(120))
-    access_expires_at = db.Column(db.DateTime)
-    created_at = db.Column(db.DateTime, default=datetime.now)
-    updated_at = db.Column(db.DateTime, default=datetime.now, onupdate=datetime.now)
-    
-    def __repr__(self):
-        return f'<Subscription user_id={self.user_id}>'
+# Database
+DB_FILE = 'pmu_users.db'
 
 # ============================================
-# CREATE TABLES
+# DATABASE SETUP
 # ============================================
+
 def init_db():
-    """Initialize database tables"""
-    try:
-        with app.app_context():
-            db.create_all()
-            print("[DB] PostgreSQL initialized successfully")
-    except Exception as e:
-        print(f"[ERROR] Database initialization: {str(e)}")
+    """Initialize database with users and subscriptions tables"""
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    # Users table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    # Subscriptions table
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            stripe_customer_id TEXT,
+            stripe_subscription_id TEXT,
+            access_expires_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    # Password reset tokens
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            token TEXT UNIQUE NOT NULL,
+            expires_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
 
 init_db()
 
 # ============================================
-# SCHEDULED TASKS - EMAIL REMINDERS
+# EMAIL HELPER
 # ============================================
-def send_expiration_reminders():
-    """Envoie des rappels email 7 jours avant expiration"""
-    try:
-        with app.app_context():
-            # Chercher les abonnements qui expirent dans 7 jours (±1 heure)
-            target_date = datetime.now() + timedelta(days=7)
-            start_time = target_date - timedelta(hours=1)
-            end_time = target_date + timedelta(hours=1)
-            
-            expiring_subs = Subscription.query.filter(
-                Subscription.access_expires_at.between(start_time, end_time),
-                Subscription.access_expires_at != None
-            ).all()
-            
-            print(f"[REMINDER] Found {len(expiring_subs)} subscriptions expiring in ~7 days")
-            
-            for sub in expiring_subs:
-                try:
-                    user = User.query.get(sub.user_id)
-                    if not user:
-                        continue
-                    
-                    # Envoyer email avec SendGrid
-                    if SENDGRID_API_KEY:
-                        sg = SendGridAPIClient(SENDGRID_API_KEY)
-                        
-                        expires_at = sub.access_expires_at.strftime('%d/%m/%Y')
-                        
-                        message = Mail(
-                            from_email=SENDGRID_FROM_EMAIL,
-                            to_emails=user.email,
-                            subject='⏰ Votre abonnement Dutching Turf expire bientôt !',
-                            plain_text_content=f"""Bonjour,
-Votre abonnement à Dutching Turf Premium expire le {expires_at}.
-Pour continuer à accéder à l'analyse complète, pensez à vous réabonner !
-👉 Se réabonner : https://web-production-b3d28.up.railway.app/pricing
-Questions ? Contactez-nous : https://web-production-b3d28.up.railway.app/contact
-À bientôt ! 🏇
----
-Dutching Turf Team""",
-                            html_content=f"""
-                            <html>
-                                <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
-                                    <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
-                                        <h1 style="color: #667eea; margin-bottom: 20px">⏰ Votre abonnement expire bientôt !</h1>
-                                        
-                                        <p style="color: #333; font-size: 16px; line-height: 1.6">Votre abonnement à Dutching Turf Premium expire le <strong>{expires_at}</strong>.</p>
-                                        
-                                        <p style="color: #333; margin: 20px 0">Pour continuer à accéder à tous les outils d'analyse, pensez à vous réabonner dès maintenant !</p>
-                                        
-                                        <div style="text-align: center; margin: 30px 0">
-                                            <a href="https://web-production-b3d28.up.railway.app/pricing" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Se réabonner (9,99€/mois)</a>
-                                        </div>
-                                        
-                                        <p style="color: #666; font-size: 14px">Une fois réabonné, l'accès sera rétabli immédiatement.</p>
-                                        
-                                        <p style="color: #999; font-size: 12px; margin-top: 20px">Besoin d'aide ? <a href="https://web-production-b3d28.up.railway.app/contact" style="color: #667eea">Contactez-nous</a></p>
-                                    </div>
-                                </body>
-                            </html>
-                            """
-                        )
-                        
-                        sg.send(message)
-                        print(f"[REMINDER] Email sent to {user.email} (expires {expires_at})")
-                except Exception as email_err:
-                    print(f"[REMINDER ERROR] Failed to send to {user.email}: {str(email_err)}")
+
+def send_email(to_email, subject, body_html):
+    """Send email via SendGrid API"""
+    if not SENDGRID_API_KEY:
+        print(f"[WARNING] SendGrid not configured. Email would be sent to {to_email}")
+        return True
     
+    try:
+        import requests
+        url = "https://api.sendgrid.com/v3/mail/send"
+        headers = {
+            "Authorization": f"Bearer {SENDGRID_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "personalizations": [{"to": [{"email": to_email}]}],
+            "from": {"email": MAIL_USERNAME},
+            "subject": subject,
+            "content": [{"type": "text/html", "value": body_html}]
+        }
+        resp = requests.post(url, json=data, headers=headers)
+        print(f"[EMAIL] Sent to {to_email}: {resp.status_code}")
+        return resp.status_code == 202
     except Exception as e:
-        print(f"[SCHEDULER ERROR] send_expiration_reminders: {str(e)}")
+        print(f"[EMAIL ERROR] {str(e)}")
+        return False
 
-# Initialiser le scheduler
+# ============================================
+# SCHEDULER - EMAIL REMINDERS
+# ============================================
+
+def send_expiry_reminders():
+    """Send email reminder 7 days before expiry"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Find subscriptions expiring in 7 days
+        target_date = (datetime.now() + timedelta(days=7)).date()
+        c.execute('''
+            SELECT u.email, s.access_expires_at 
+            FROM subscriptions s
+            JOIN users u ON s.user_id = u.id
+            WHERE DATE(s.access_expires_at) = ?
+        ''', (target_date.isoformat(),))
+        
+        users = c.fetchall()
+        conn.close()
+        
+        for email, expires_at in users:
+            subject = "Votre abonnement PMU Dutching expire bientôt ⏰"
+            body = f"""
+            <p>Bonjour,</p>
+            <p>Votre abonnement premium expires le <strong>{expires_at}</strong>.</p>
+            <p>Pour continuer à accéder au tableau d'analyse, <a href="https://pmu-dutching.app/pricing">cliquez ici pour renouveler</a>.</p>
+            <p>Bonne chance ! 🏇</p>
+            """
+            send_email(email, subject, body)
+            print(f"[REMINDER] Sent to {email}")
+    except Exception as e:
+        print(f"[SCHEDULER ERROR] {str(e)}")
+
+# Start scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=send_expiration_reminders, trigger="cron", hour=9, minute=0)
+scheduler.add_job(func=send_expiry_reminders, trigger="cron", hour=9, minute=0)
 scheduler.start()
-
-# Arrêter le scheduler quand l'app s'arrête
 atexit.register(lambda: scheduler.shutdown())
 
 # ============================================
 # AUTHENTICATION DECORATORS
 # ============================================
+
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('index'))
+            return redirect(url_for('pricing'))
         return f(*args, **kwargs)
     return decorated_function
 
@@ -188,54 +167,35 @@ def premium_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if 'user_id' not in session:
-            return redirect(url_for('index'))
+            return redirect(url_for('pricing'))
         
         user_id = session['user_id']
-        try:
-            subscription = Subscription.query.filter_by(user_id=user_id).first()
-            
-            if not subscription or subscription.access_expires_at is None:
-                return redirect(url_for('pricing'))
-            
-            if datetime.now() > subscription.access_expires_at:
-                return redirect(url_for('pricing'))
-        except Exception as e:
-            print(f"[DB ERROR] {str(e)}")
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+        result = c.fetchone()
+        conn.close()
+        
+        if not result or result[0] is None:
+            return redirect(url_for('pricing'))
+        
+        expires_at = datetime.fromisoformat(result[0])
+        if datetime.now() > expires_at:
             return redirect(url_for('pricing'))
         
         return f(*args, **kwargs)
     return decorated_function
 
 # ============================================
-# ROUTES - INDEX & LANDING PAGE
+# AUTH ROUTES
 # ============================================
+
 @app.route('/')
 def index():
     if 'user_id' in session:
-        user_id = session['user_id']
-        try:
-            subscription = Subscription.query.filter_by(user_id=user_id).first()
-            
-            if subscription and subscription.access_expires_at:
-                if datetime.now() < subscription.access_expires_at:
-                    return redirect(url_for('dashboard'))
-        except:
-            pass
-        
-        return redirect(url_for('pricing'))
-    
-    return render_template('index.html')
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('pricing'))
 
-# ============================================
-# CONTACT ROUTE
-# ============================================
-@app.route('/contact', methods=['GET', 'POST'])
-def contact():
-    return render_template('contact.html')
-
-# ============================================
-# AUTH ROUTES
-# ============================================
 @app.route('/signup', methods=['GET', 'POST'])
 def signup():
     if request.method == 'POST':
@@ -253,28 +213,28 @@ def signup():
             return render_template('signup.html', error='Le mot de passe doit faire au moins 6 caractères')
         
         try:
-            existing_user = User.query.filter_by(email=email).first()
-            if existing_user:
-                return render_template('signup.html', error='Cet email est déjà inscrit')
-            
             hashed_password = hashlib.sha256(password.encode()).hexdigest()
+            conn = sqlite3.connect(DB_FILE)
+            c = conn.cursor()
             
-            new_user = User(email=email, password=hashed_password)
-            db.session.add(new_user)
-            db.session.flush()
+            c.execute('INSERT INTO users (email, password) VALUES (?, ?)', (email, hashed_password))
+            user_id = c.lastrowid
             
-            new_subscription = Subscription(user_id=new_user.id)
-            db.session.add(new_subscription)
+            c.execute('''
+                INSERT INTO subscriptions (user_id, access_expires_at) 
+                VALUES (?, ?)
+            ''', (user_id, None))
             
-            db.session.commit()
+            conn.commit()
+            conn.close()
             
-            session['user_id'] = new_user.id
-            session['email'] = new_user.email
+            session['user_id'] = user_id
+            session['email'] = email
             return redirect(url_for('pricing'))
             
+        except sqlite3.IntegrityError:
+            return render_template('signup.html', error='Cet email est déjà inscrit')
         except Exception as e:
-            db.session.rollback()
-            print(f"[SIGNUP ERROR] {str(e)}")
             return render_template('signup.html', error=f'Erreur: {str(e)}')
     
     return render_template('signup.html')
@@ -286,25 +246,16 @@ def login():
         password = request.form.get('password')
         
         hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        try:
-            user = User.query.filter_by(email=email, password=hashed_password).first()
-            
-            if user:
-                session['user_id'] = user.id
-                session['email'] = user.email
-                
-                try:
-                    subscription = Subscription.query.filter_by(user_id=user.id).first()
-                    
-                    if subscription and subscription.access_expires_at:
-                        if datetime.now() < subscription.access_expires_at:
-                            return redirect(url_for('dashboard'))
-                except:
-                    pass
-                
-                return redirect(url_for('pricing'))
-        except Exception as e:
-            print(f"[LOGIN ERROR] {str(e)}")
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('SELECT id, email FROM users WHERE email = ? AND password = ?', (email, hashed_password))
+        user = c.fetchone()
+        conn.close()
+        
+        if user:
+            session['user_id'] = user[0]
+            session['email'] = user[1]
+            return redirect(url_for('dashboard'))
         
         return render_template('login.html', error='Email ou mot de passe incorrect')
     
@@ -313,133 +264,108 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for('pricing'))
 
 # ============================================
 # PASSWORD RESET ROUTES
 # ============================================
+
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
     if request.method == 'POST':
-        email = request.form.get('email', '').strip()
+        email = request.form.get('email')
         
-        if not email:
-            return render_template('forgot_password.html', error='Email requis')
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('SELECT id FROM users WHERE email = ?', (email,))
+        user = c.fetchone()
         
-        try:
-            user = User.query.filter_by(email=email).first()
+        if user:
+            user_id = user[0]
+            import secrets
+            token = secrets.token_urlsafe(32)
+            expires_at = datetime.now() + timedelta(hours=1)
             
-            if user:
-                reset_token = secrets.token_urlsafe(32)
-                user.reset_token = reset_token
-                user.reset_token_expires = datetime.now() + timedelta(hours=1)
-                
-                db.session.commit()
-                
-                try:
-                    if SENDGRID_API_KEY:
-                        sg = SendGridAPIClient(SENDGRID_API_KEY)
-                        
-                        reset_link = f"{request.host_url}reset-password/{reset_token}"
-                        
-                        message = Mail(
-                            from_email=SENDGRID_FROM_EMAIL,
-                            to_emails=user.email,
-                            subject='🔐 Réinitialiser votre mot de passe - Dutching Turf',
-                            plain_text_content=f"""Bonjour,
-Vous avez demandé à réinitialiser votre mot de passe.
-Cliquez sur ce lien pour créer un nouveau mot de passe (lien valide 1 heure) :
-{reset_link}
-Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
----
-Dutching Turf Team""",
-                            html_content=f"""
-                            <html>
-                                <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
-                                    <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
-                                        <h1 style="color: #667eea; margin-bottom: 20px">🔐 Réinitialiser votre mot de passe</h1>
-                                        
-                                        <p style="color: #333; font-size: 16px; line-height: 1.6">Vous avez demandé à réinitialiser votre mot de passe Dutching Turf.</p>
-                                        
-                                        <p style="color: #333; margin: 20px 0">Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-                                        
-                                        <div style="text-align: center; margin: 30px 0">
-                                            <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Réinitialiser le mot de passe</a>
-                                        </div>
-                                        
-                                        <p style="color: #666; font-size: 14px">Ce lien expire dans 1 heure.</p>
-                                        
-                                        <p style="color: #999; font-size: 12px; margin-top: 20px">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.</p>
-                                    </div>
-                                </body>
-                            </html>
-                            """
-                        )
-                        
-                        sg.send(message)
-                        print(f"[EMAIL] Reset link sent to {user.email}")
-                except Exception as email_err:
-                    print(f"[EMAIL ERROR] {str(email_err)}")
+            c.execute('DELETE FROM password_resets WHERE user_id = ?', (user_id,))
+            c.execute('''
+                INSERT INTO password_resets (user_id, token, expires_at)
+                VALUES (?, ?, ?)
+            ''', (user_id, token, expires_at.isoformat()))
+            conn.commit()
             
-            return render_template('forgot_password.html', success='Si cet email existe, vous recevrez un lien de réinitialisation')
+            reset_url = f"https://pmu-dutching.app/reset-password?token={token}"
+            subject = "Réinitialiser votre mot de passe PMU Dutching"
+            body = f"""
+            <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
+            <p><a href="{reset_url}">Réinitialiser mon mot de passe</a></p>
+            <p>Ce lien expire dans 1 heure.</p>
+            """
+            send_email(email, subject, body)
         
-        except Exception as e:
-            print(f"[FORGOT PASSWORD ERROR] {str(e)}")
-            return render_template('forgot_password.html', error='Une erreur s\'est produite')
+        conn.close()
+        return render_template('forgot_password.html', message='Si cet email existe, vous recevrez un lien de réinitialisation')
     
     return render_template('forgot_password.html')
 
-@app.route('/reset-password/<token>', methods=['GET', 'POST'])
-def reset_password(token):
-    try:
-        user = User.query.filter_by(reset_token=token).first()
-        
-        if not user or not user.reset_token_expires or datetime.now() > user.reset_token_expires:
-            return render_template('reset_password.html', error='Lien invalide ou expiré', token=None)
-        
-        if request.method == 'POST':
-            password = request.form.get('password', '').strip()
-            password_confirm = request.form.get('password_confirm', '').strip()
-            
-            if not password or not password_confirm:
-                return render_template('reset_password.html', error='Tous les champs sont requis', token=token)
-            
-            if password != password_confirm:
-                return render_template('reset_password.html', error='Les mots de passe ne correspondent pas', token=token)
-            
-            if len(password) < 6:
-                return render_template('reset_password.html', error='Le mot de passe doit faire au moins 6 caractères', token=token)
-            
-            user.password = hashlib.sha256(password.encode()).hexdigest()
-            user.reset_token = None
-            user.reset_token_expires = None
-            
-            db.session.commit()
-            
-            print(f"[PASSWORD RESET] Password reset for {user.email}")
-            return render_template('reset_password.html', success='Mot de passe réinitialisé avec succès ! Vous pouvez maintenant vous connecter.')
-        
-        return render_template('reset_password.html', token=token)
+@app.route('/reset-password', methods=['GET', 'POST'])
+def reset_password():
+    token = request.args.get('token')
     
-    except Exception as e:
-        print(f"[RESET PASSWORD ERROR] {str(e)}")
-        return render_template('reset_password.html', error='Une erreur s\'est produite', token=None)
+    if request.method == 'POST':
+        password = request.form.get('password')
+        password_confirm = request.form.get('password_confirm')
+        token = request.form.get('token')
+        
+        if password != password_confirm:
+            return render_template('reset_password.html', error='Les mots de passe ne correspondent pas', token=token)
+        
+        if len(password) < 6:
+            return render_template('reset_password.html', error='Le mot de passe doit faire au moins 6 caractères', token=token)
+        
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('''
+            SELECT user_id FROM password_resets 
+            WHERE token = ? AND expires_at > ?
+        ''', (token, datetime.now().isoformat()))
+        result = c.fetchone()
+        
+        if not result:
+            return render_template('reset_password.html', error='Token invalide ou expiré', token=token)
+        
+        user_id = result[0]
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        c.execute('UPDATE users SET password = ? WHERE id = ?', (hashed_password, user_id))
+        c.execute('DELETE FROM password_resets WHERE token = ?', (token,))
+        conn.commit()
+        conn.close()
+        
+        return render_template('reset_password.html', success=True)
+    
+    if not token:
+        return redirect(url_for('forgot_password'))
+    
+    return render_template('reset_password.html', token=token)
 
 # ============================================
 # MAIN ROUTES
 # ============================================
+
 @app.route('/pricing')
 def pricing():
     if 'user_id' in session:
         user_id = session['user_id']
-        try:
-            subscription = Subscription.query.filter_by(user_id=user_id).first()
-            
-            if subscription and subscription.access_expires_at:
-                if datetime.now() < subscription.access_expires_at:
-                    return redirect(url_for('dashboard'))
-        except Exception as e:
-            print(f"[PRICING ERROR] {str(e)}")
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('SELECT access_expires_at FROM subscriptions WHERE user_id = ?', (user_id,))
+        result = c.fetchone()
+        conn.close()
+        
+        if result and result[0]:
+            expires_at = datetime.fromisoformat(result[0])
+            if datetime.now() < expires_at:
+                return redirect(url_for('dashboard'))
     
     return render_template('pricing.html', stripe_key=STRIPE_PUBLISHABLE_KEY)
 
@@ -451,6 +377,7 @@ def dashboard():
 # ============================================
 # STRIPE PAYMENT ROUTES
 # ============================================
+
 @app.route('/api/create-checkout-session', methods=['POST'])
 @login_required
 def create_checkout_session():
@@ -460,23 +387,24 @@ def create_checkout_session():
         
         print(f"[DEBUG] Creating checkout for user {user_id} ({email})")
         
-        try:
-            subscription = Subscription.query.filter_by(user_id=user_id).first()
-            
-            if subscription and subscription.stripe_customer_id:
-                customer_id = subscription.stripe_customer_id
-                print(f"[DEBUG] Using existing customer: {customer_id}")
-            else:
-                print(f"[DEBUG] Creating new Stripe customer")
-                customer = stripe.Customer.create(email=email)
-                customer_id = customer.id
-                print(f"[DEBUG] New customer created: {customer_id}")
-                subscription.stripe_customer_id = customer_id
-                db.session.commit()
-        except Exception as db_err:
-            db.session.rollback()
-            print(f"[DB ERROR] {str(db_err)}")
-            raise
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?', (user_id,))
+        result = c.fetchone()
+        
+        if result and result[0]:
+            customer_id = result[0]
+            print(f"[DEBUG] Using existing customer: {customer_id}")
+        else:
+            print(f"[DEBUG] Creating new Stripe customer")
+            customer = stripe.Customer.create(email=email)
+            customer_id = customer.id
+            print(f"[DEBUG] New customer created: {customer_id}")
+            c.execute('UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?', 
+                     (customer_id, user_id))
+            conn.commit()
+        
+        conn.close()
         
         print(f"[DEBUG] Creating checkout session with mode=payment")
         checkout_session = stripe.checkout.Session.create(
@@ -486,7 +414,7 @@ def create_checkout_session():
                 'price_data': {
                     'currency': 'eur',
                     'product_data': {
-                        'name': 'Dutching Turf Premium - 1 Mois',
+                        'name': 'PMUDutchingTool Premium - 1 Mois',
                         'description': 'Accès complet au tableau d\'analyse PMU'
                     },
                     'unit_amount': 999,
@@ -520,144 +448,50 @@ def success():
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         user_id = session['user_id']
         
-        user = User.query.get(user_id)
-        if not user:
-            return redirect(url_for('dashboard'))
-        
         access_expires = datetime.now() + timedelta(days=30)
         
-        subscription = Subscription.query.filter_by(user_id=user_id).first()
-        subscription.stripe_subscription_id = checkout_session.id
-        subscription.access_expires_at = access_expires
-        subscription.updated_at = datetime.now()
-        
-        db.session.commit()
-        
-        try:
-            if SENDGRID_API_KEY:
-                sg = SendGridAPIClient(SENDGRID_API_KEY)
-                
-                message = Mail(
-                    from_email=SENDGRID_FROM_EMAIL,
-                    to_emails=user.email,
-                    subject='✅ Bienvenue à Dutching Turf Premium !',
-                    plain_text_content=f"""Bonjour,
-Merci pour votre abonnement à Dutching Turf Premium ! 🎉
-🎟️ DÉTAILS DE VOTRE ABONNEMENT:
-• Montant: 9,99€
-• Durée: 30 jours
-• Expire le: {access_expires.strftime('%d/%m/%Y')}
-• Accès: Illimité au dashboard complet
-🚀 COMMENCEZ MAINTENANT:
-Allez sur votre dashboard pour commencer à analyser !
-À bientôt sur Dutching Turf! 🏇
----
-Dutching Turf Team""",
-                    html_content=f"""
-                    <html>
-                        <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
-                            <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
-                                <h1 style="color: #667eea; margin-bottom: 20px">✅ Bienvenue à Dutching Turf Premium!</h1>
-                                
-                                <p style="color: #333; font-size: 16px; line-height: 1.6">Merci pour votre abonnement ! 🎉</p>
-                                
-                                <div style="background: #f8f9fb; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 5px">
-                                    <h3 style="color: #667eea; margin-top: 0">Détails de votre abonnement:</h3>
-                                    <p style="margin: 5px 0"><strong>Montant:</strong> 9,99€</p>
-                                    <p style="margin: 5px 0"><strong>Durée:</strong> 30 jours</p>
-                                    <p style="margin: 5px 0"><strong>Expire le:</strong> {access_expires.strftime('%d/%m/%Y')}</p>
-                                    <p style="margin: 5px 0"><strong>Accès:</strong> Illimité ✅</p>
-                                </div>
-                                
-                                <p style="color: #666; font-size: 14px">Besoin d'aide ? <a href="/contact" style="color: #667eea">Contactez-nous</a></p>
-                            </div>
-                        </body>
-                    </html>
-                    """
-                )
-                
-                sg.send(message)
-                print(f"[EMAIL] Confirmation envoyée à {user.email}")
-        except Exception as email_err:
-            print(f"[EMAIL ERROR] {str(email_err)}")
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('''
+            UPDATE subscriptions 
+            SET stripe_subscription_id = ?, 
+                access_expires_at = ?,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE user_id = ?
+        ''', (checkout_session.id, access_expires.isoformat(), user_id))
+        conn.commit()
+        conn.close()
         
         print(f"[SUCCESS] Payment received for user {user_id}. Access until {access_expires}")
+        
+        # Send confirmation email
+        email = session.get('email', '')
+        if email:
+            subject = "Bienvenue ! Votre abonnement est activé 🎉"
+            body = f"""
+            <p>Bienvenue dans PMU Dutching Tool Premium !</p>
+            <p>Votre abonnement est actif jusqu'au <strong>{access_expires.strftime('%d/%m/%Y')}</strong>.</p>
+            <p>Accédez au <a href="https://pmu-dutching.app/dashboard">tableau d'analyse</a>.</p>
+            <p>Bonne chance ! 🏇</p>
+            """
+            send_email(email, subject, body)
+        
         return redirect(url_for('dashboard'))
     
     except Exception as e:
-        db.session.rollback()
         print(f"[ERROR] Success page error: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return redirect(url_for('dashboard'))
 
 # ============================================
-# API ROUTES
+# API ROUTES - PROGRAMME & RAPPORTS (PREMIUM)
 # ============================================
-@app.route('/api/subscription-info')
-@login_required
-def subscription_info():
-    user_id = session['user_id']
-    try:
-        subscription = Subscription.query.filter_by(user_id=user_id).first()
-        
-        if subscription and subscription.access_expires_at:
-            expires_at = subscription.access_expires_at
-            days_left = (expires_at - datetime.now()).days
-            
-            return jsonify({
-                'has_subscription': True,
-                'expires_at': expires_at.strftime('%d/%m/%Y'),
-                'expires_at_iso': expires_at.isoformat(),
-                'days_left': max(0, days_left),
-                'is_valid': datetime.now() < expires_at
-            })
-        else:
-            return jsonify({
-                'has_subscription': False,
-                'expires_at': None,
-                'days_left': 0,
-                'is_valid': False
-            })
-    except Exception as e:
-        print(f"[ERROR] subscription_info: {str(e)}")
-        return jsonify({'error': str(e)}), 500
 
-# ============================================
-# API PROGRAMME ENDPOINT (DEDICATED)
-# ============================================
 @app.route('/api/programme/<date_str>')
 @premium_required
 def api_programme(date_str):
-    """Proxy dédié pour programme PMU avec le bon format"""
+    """Proxy dédié pour endpoint /programme"""
     try:
-        url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date_str}"
-        if request.query_string:
-            url += '?' + request.query_string.decode('utf-8')
-        
-        print(f"[API] Proxying programme to: {url}")
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json"
-        }
-        
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            return jsonify(data)
-    except Exception as e:
-        print(f"[API ERROR] Programme proxy: {str(e)}")
-        return jsonify({'error': str(e)}), 500
-
-# ============================================
-# GENERIC API PROXY (FALLBACK)
-# ============================================
-@app.route('/api/<path:path>')
-@premium_required
-def api_proxy(path):
-    try:
-        url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/{path}"
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/programme/{date_str}"
         if request.query_string:
             url += '?' + request.query_string.decode('utf-8')
         
@@ -673,115 +507,74 @@ def api_proxy(path):
             data = json.loads(resp.read().decode('utf-8'))
             return jsonify(data)
     except Exception as e:
-        print(f"[API ERROR] {str(e)}")
+        print(f"[API ERROR] Programme: {str(e)}")
         return jsonify({'error': str(e)}), 500
+
+@app.route('/api/programme/<date_str>/R<int:numR>/C<int:numC>/rapports-definitifs')
+@premium_required
+def api_rapports_definitifs(date_str, numR, numC):
+    """Proxy dédié pour rapports définitifs PMU"""
+    try:
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date_str}/R{numR}/C{numC}/rapports-definitifs"
+        if request.query_string:
+            url += '?' + request.query_string.decode('utf-8')
+        
+        print(f"[API] Proxying rapports to: {url}")
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+        
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return jsonify(data)
+    except Exception as e:
+        print(f"[API ERROR] Rapports: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Generic proxy (fallback)
+@app.route('/api/<path:path>')
+@premium_required
+def api_proxy(path):
+    """Proxy générique pour autres appels API"""
+    try:
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
+        if request.query_string:
+            url += '?' + request.query_string.decode('utf-8')
+        
+        print(f"[API] Proxying to: {url}")
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "application/json"
+        }
+        
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            return jsonify(data)
+    except Exception as e:
+        print(f"[API ERROR] Generic: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================
+# HEALTH CHECK
+# ============================================
 
 @app.route('/api/health')
 def health():
     return jsonify({
         'status': 'ok',
-        'app': 'Dutching Turf',
+        'app': 'PMUDutchingTool',
         'timestamp': datetime.now().isoformat()
     })
 
 # ============================================
-# SCRAPING ROUTES (PREMIUM ONLY)
-# ============================================
-@app.route('/paristurf/<date_str>/<rc>')
-@premium_required
-def paristurf_pronos(date_str, rc):
-    """Pronos Paris-Turf"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({"tips": [], "records": {}}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({"tips": [], "records": {}}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        result = get_paristurf_pronos(date_str, num_r, num_c)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Paris-Turf: {str(e)}")
-        return jsonify({"tips": [], "records": {}}), 500
-
-@app.route('/records/<date_str>/<rc>')
-@premium_required
-def records_km(date_str, rc):
-    """Records km des chevaux"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        
-        horse_names = {}
-        for key, value in request.args.items():
-            try:
-                num = int(key)
-                horse_names[num] = value
-            except:
-                pass
-        
-        result = get_records_km(date_str, num_r, num_c, horse_names)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Records: {str(e)}")
-        return jsonify({}), 500
-
-@app.route('/turfomania/<date_str>/<rc>')
-@premium_required
-def turfomania_pronos(date_str, rc):
-    """Pronos Turfomania"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({"pronos": [], "source": "Turfomania"}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({"pronos": []}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        result = get_turfomania_pronos(date_str, num_r, num_c)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Turfomania: {str(e)}")
-        return jsonify({"pronos": [], "source": "Turfomania"}), 500
-
-# ============================================
-# RACE RESULTS ROUTE
-# ============================================
-@app.route('/results/<date_str>/<rc>')
-@premium_required
-def race_results(date_str, rc):
-    """Résultats définitifs et cotes"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "unavailable"}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "invalid_format"}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        result = get_race_results(date_str, num_r, num_c)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Race Results: {str(e)}")
-        return jsonify({"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "error"}), 500
-
-# ============================================
 # ERROR HANDLERS
 # ============================================
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({'error': 'Not found'}), 404
@@ -793,6 +586,7 @@ def server_error(error):
 # ============================================
 # RUN APP
 # ============================================
+
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
