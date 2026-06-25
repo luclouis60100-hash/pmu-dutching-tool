@@ -18,7 +18,7 @@ import atexit
 
 # Scraping imports
 try:
-    from scraper import get_paristurf_pronos, get_records_km, get_turfomania_pronos
+    from scraper import get_paristurf_pronos, get_records_km, get_turfomania_pronos, get_race_results
     SCRAPER_AVAILABLE = True
 except ImportError:
     print("[!] Warning: scraper module not available. Some features disabled.")
