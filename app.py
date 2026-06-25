@@ -13,6 +13,8 @@ from functools import wraps
 import hashlib
 import json
 import secrets
+from apscheduler.schedulers.background import BackgroundScheduler
+import atexit
 
 # Scraping imports
 try:
@@ -92,6 +94,95 @@ def init_db():
         print(f"[ERROR] Database initialization: {str(e)}")
 
 init_db()
+
+# ============================================
+# SCHEDULED TASKS - EMAIL REMINDERS
+# ============================================
+
+def send_expiration_reminders():
+    """Envoie des rappels email 7 jours avant expiration"""
+    try:
+        with app.app_context():
+            # Chercher les abonnements qui expirent dans 7 jours (±1 heure)
+            target_date = datetime.now() + timedelta(days=7)
+            start_time = target_date - timedelta(hours=1)
+            end_time = target_date + timedelta(hours=1)
+            
+            expiring_subs = Subscription.query.filter(
+                Subscription.access_expires_at.between(start_time, end_time),
+                Subscription.access_expires_at != None
+            ).all()
+            
+            print(f"[REMINDER] Found {len(expiring_subs)} subscriptions expiring in ~7 days")
+            
+            for sub in expiring_subs:
+                try:
+                    user = User.query.get(sub.user_id)
+                    if not user:
+                        continue
+                    
+                    # Envoyer email avec SendGrid
+                    if SENDGRID_API_KEY:
+                        sg = SendGridAPIClient(SENDGRID_API_KEY)
+                        
+                        expires_at = sub.access_expires_at.strftime('%d/%m/%Y')
+                        
+                        message = Mail(
+                            from_email=SENDGRID_FROM_EMAIL,
+                            to_emails=user.email,
+                            subject='⏰ Votre abonnement Dutching Turf expire bientôt !',
+                            plain_text_content=f"""Bonjour,
+
+Votre abonnement à Dutching Turf Premium expire le {expires_at}.
+
+Pour continuer à accéder à l'analyse complète, pensez à vous réabonner !
+
+👉 Se réabonner : https://web-production-b3d28.up.railway.app/pricing
+
+Questions ? Contactez-nous : https://web-production-b3d28.up.railway.app/contact
+
+À bientôt ! 🏇
+
+---
+Dutching Turf Team""",
+                            html_content=f"""
+                            <html>
+                                <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
+                                    <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
+                                        <h1 style="color: #667eea; margin-bottom: 20px">⏰ Votre abonnement expire bientôt !</h1>
+                                        
+                                        <p style="color: #333; font-size: 16px; line-height: 1.6">Votre abonnement à Dutching Turf Premium expire le <strong>{expires_at}</strong>.</p>
+                                        
+                                        <p style="color: #333; margin: 20px 0">Pour continuer à accéder à tous les outils d'analyse, pensez à vous réabonner dès maintenant !</p>
+                                        
+                                        <div style="text-align: center; margin: 30px 0">
+                                            <a href="https://web-production-b3d28.up.railway.app/pricing" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Se réabonner (9,99€/mois)</a>
+                                        </div>
+                                        
+                                        <p style="color: #666; font-size: 14px">Une fois réabonné, l'accès sera rétabli immédiatement.</p>
+                                        
+                                        <p style="color: #999; font-size: 12px; margin-top: 20px">Besoin d'aide ? <a href="https://web-production-b3d28.up.railway.app/contact" style="color: #667eea">Contactez-nous</a></p>
+                                    </div>
+                                </body>
+                            </html>
+                            """
+                        )
+                        
+                        sg.send(message)
+                        print(f"[REMINDER] Email sent to {user.email} (expires {expires_at})")
+                except Exception as email_err:
+                    print(f"[REMINDER ERROR] Failed to send to {user.email}: {str(email_err)}")
+    
+    except Exception as e:
+        print(f"[SCHEDULER ERROR] send_expiration_reminders: {str(e)}")
+
+# Initialiser le scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=send_expiration_reminders, trigger="cron", hour=9, minute=0)
+scheduler.start()
+
+# Arrêter le scheduler quand l'app s'arrête
+atexit.register(lambda: scheduler.shutdown())
 
 # ============================================
 # AUTHENTICATION DECORATORS
