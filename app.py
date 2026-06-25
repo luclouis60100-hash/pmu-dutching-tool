@@ -631,7 +631,7 @@ def subscription_info():
 def api_programme(date_str):
     """Proxy dédié pour programme PMU avec le bon format"""
     try:
-        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/programme/{date_str}"
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date_str}"
         if request.query_string:
             url += '?' + request.query_string.decode('utf-8')
         
@@ -657,7 +657,7 @@ def api_programme(date_str):
 @premium_required
 def api_proxy(path):
     try:
-        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
+        url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/{path}"
         if request.query_string:
             url += '?' + request.query_string.decode('utf-8')
         
