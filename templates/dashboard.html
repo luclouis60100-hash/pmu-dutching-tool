@@ -165,6 +165,35 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
 .pos-chip.p3 .pos-num { color: #ea580c; }
 .pos-horse { font-weight: 600; font-size: 12px; color: var(--text); }
 .pos-cote { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.record-km {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  color: #0d7254; background: #e8f4f0;
+  padding: 2px 7px; border-radius: 5px; border: 1px solid #a7d9c8;
+  white-space: nowrap;
+}
+.record-na { font-size: 12px; color: var(--text3); }
+.equidia-bar {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow);
+}
+.equidia-title {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--text3); margin-bottom: 10px;
+}
+.equidia-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.eq-chip {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+  transition: all 0.12s;
+}
+.eq-chip:hover { border-color: var(--accent); background: var(--accent-light); }
+.eq-chip.base { background: #e8f4f0; border-color: #a7d9c8; }
+.eq-chip.base:hover { background: #d1ede5; }
+.eq-pos { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text3); min-width: 16px; }
+.eq-chip.base .eq-pos { color: #0d7254; }
+.eq-num { font-family: var(--mono); font-size: 11px; color: var(--accent-text); background: var(--accent-light); padding: 1px 5px; border-radius: 4px; }
+.eq-nom { font-weight: 600; font-size: 12px; }
 .ldr { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 2.5rem; color: var(--text3); font-size: 13px; }
 .spin { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -173,23 +202,36 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
 .empty .tit { font-size: 15px; font-weight: 500; color: var(--text2); }
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+#page-rapports { display: none; padding: 1.25rem; overflow-y: auto; height: calc(100vh - 56px); flex-direction: column; gap: 1rem; }
+#page-musique { display: none; padding: 1.25rem; flex-direction: column; gap: 1rem; overflow-y: auto; height: calc(100vh - 56px); }
 .rapport-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-top: 1rem; }
 </style>
 </head>
 <body>
 <div class="topbar">
   <div style="display:flex;align-items:center;gap:0">
-    <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching Turf</div>
+    <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching PMU</div>
     <button class="tab-btn active" id="tab-courses" onclick="switchTab('courses')">📋 Courses</button>
     <button class="tab-btn" id="tab-rapports" onclick="switchTab('rapports')">🏆 Rapports</button>
+    <button class="tab-btn" id="tab-musique" onclick="switchTab('musique')">🎵 Musique</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text2)">
+      <span>Arrondi</span>
+      <select id="round-mode" style="border:none;background:transparent;font-size:12px;color:var(--text);cursor:pointer;outline:none;font-family:var(--font)">
+        <option value="none">Exact</option>
+        <option value="down">↓ Inf.</option>
+        <option value="up">↑ Sup.</option>
+        <option value="nearest" selected>≈ Proche</option>
+      </select>
+    </div>
     <button id="btn-refresh" onclick="manualRefresh()" style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font)" title="Rafraîchir maintenant">
       <span id="refresh-icon">↻</span> Actualiser
     </button>
     <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px">
       <span style="font-size:12px;color:var(--text2)">📅</span>
       <input type="date" id="date-picker" style="border:none;background:transparent;font-size:12px;font-family:var(--font);color:var(--text);cursor:pointer;outline:none" onchange="changeDate(this.value)">
+      <button onclick="changeDate('today')" id="btn-today" style="display:none;border:none;background:var(--accent);color:white;border-radius:5px;padding:2px 8px;font-size:11px;font-family:var(--font);cursor:pointer">Aujourd'hui</button>
     </div>
     <div class="live-badge" id="live-badge">
       <div class="live-dot"></div>
@@ -198,8 +240,6 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
     <span id="last-upd"></span>
   </div>
 </div>
-
-<!-- PAGE COURSES -->
 <div id="page-courses">
 <div class="reunions-bar" id="rbar">
   <div class="ldr"><div class="spin"></div></div>
@@ -219,9 +259,11 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
       </div>
       <div class="stat-card"><div class="ctrl-label">Chevaux cochés</div><div class="stat-val blue" id="s-nb">0</div></div>
       <div class="stat-card"><div class="ctrl-label">Budget engagé</div><div class="stat-val" id="s-bud">—</div></div>
-      <div class="stat-card"><div class="ctrl-label">Gain théorique</div><div class="stat-val" id="s-gain">—</div></div>
+      <div class="stat-card"><div class="ctrl-label">Gain théorique net</div><div class="stat-val" id="s-gain">—</div></div>
       <div class="stat-card"><div class="ctrl-label">Rentable ?</div><div class="stat-val" id="s-rent">—</div></div>
+      <div style="display:flex;align-items:center;padding:0 4px"></div>
     </div>
+    <div id="validated-bar" style="display:none"></div>
     <div id="panel">
       <div class="empty">
         <div class="ico">🏁</div>
@@ -231,10 +273,9 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
     </div>
   </div>
 </div>
-</div><!-- /page-courses -->
+</div>
 
-<!-- PAGE RAPPORTS -->
-<div id="page-rapports" style="display:none;padding:1.25rem;overflow-y:auto;height:calc(100vh - 56px)">
+<div id="page-rapports">
   <div id="rapports-content">
     <div class="empty">
       <div class="ico">🏆</div>
@@ -244,34 +285,40 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
   </div>
 </div>
 
+<div id="page-musique">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🎵 Analyse de la Musique</div>
+    <div style="font-size:12px;color:var(--text3)">Score : 1er=3pts · 2e=2pts · 3e=1pt · Minimum 4 courses</div>
+  </div>
+  <div id="musique-content">
+    <div class="empty"><div class="ico">🎵</div><div class="tit">Sélectionnez une course</div></div>
+  </div>
+</div>
+
 <script>
-// ══════════════════════════════════════════
-//  VARIABLES GLOBALES
-// ══════════════════════════════════════════
 let reunions = [], selReu = null, selCourse = null;
-let participants = [], checked = new Set(), rapportsData = null;
+let participants = [], checked = new Set(), arrivee = null, rapportsData = null;
 let refreshTimer = null, countdown = 20, isToday = true;
+let sortCol = 'num', sortAsc = true;
+let recordsKm = {}, pronoCacheMap = {}, turfbzhCache = {}, valeursCache = {};
 let filtreDate = 'today';
+const API = 'http://localhost:8080';
 
 function ds() {
   const d = document.getElementById('date-picker')?.value;
-  if (!d || filtreDate === 'today') {
-    return new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).split('/').join('');
-  }
+  if (!d || filtreDate === 'today') return new Date().toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'}).split('/').join('').replace(/(\d{2})(\d{2})(\d{4})/,'$1$2$3');
   const [y,m,dd] = d.split('-');
   return dd+m+y;
 }
 
-// ══════════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════════
+function api(path) { return API + '/api' + path; }
+
 document.addEventListener('DOMContentLoaded', () => {
   const today = new Date();
   const y = today.getFullYear();
   const m = String(today.getMonth()+1).padStart(2,'0');
   const d = String(today.getDate()).padStart(2,'0');
   document.getElementById('date-picker').value = `${y}-${m}-${d}`;
-  document.getElementById('budget').addEventListener('change', updateStats);
   loadReunions();
   startCountdown();
 });
@@ -281,52 +328,68 @@ function switchTab(tab) {
   document.getElementById('tab-courses').className = 'tab-btn' + (tab === 'courses' ? ' active' : '');
   document.getElementById('page-rapports').style.display = tab === 'rapports' ? 'flex' : 'none';
   document.getElementById('tab-rapports').className = 'tab-btn' + (tab === 'rapports' ? ' active' : '');
+  document.getElementById('page-musique').style.display = tab === 'musique' ? 'flex' : 'none';
+  document.getElementById('tab-musique').className = 'tab-btn' + (tab === 'musique' ? ' active' : '');
   if (tab === 'rapports') renderRapports();
+  if (tab === 'musique') renderMusique();
 }
 
-// ══════════════════════════════════════════
-//  DATE
-// ══════════════════════════════════════════
 function changeDate(val) {
-  filtreDate = val || 'today';
-  const today = new Date().toISOString().slice(0,10);
-  isToday = !val || val === today;
+  if (val === 'today') {
+    filtreDate = 'today';
+    isToday = true;
+    const today = new Date();
+    document.getElementById('date-picker').value = today.toISOString().slice(0,10);
+    document.getElementById('btn-today').style.display = 'none';
+  } else {
+    filtreDate = val;
+    const today = new Date().toISOString().slice(0,10);
+    isToday = val === today;
+    document.getElementById('btn-today').style.display = isToday ? 'none' : '';
+  }
+  recordsKm = {}; pronoCacheMap = {}; turfbzhCache = {}; valeursCache = {};
   reunions = []; selReu = null; selCourse = null;
-  participants = []; checked = new Set(); rapportsData = null;
+  participants = []; checked = new Set();
   document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">🏁</div><div class="tit">Sélectionnez une réunion</div></div>';
   document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div></div>';
-  updateStats();
   loadReunions();
 }
 
-// ══════════════════════════════════════════
-//  RÉUNIONS
-// ══════════════════════════════════════════
 async function loadReunions() {
   document.getElementById('rbar').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   document.getElementById('sb').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   try {
-    const r = await fetch(`/api/programme/${ds()}?specialisation=INTERNET`);
+    const r = await fetch(api(`/programme/${ds()}?specialisation=INTERNET`));
     const data = await r.json();
     reunions = (data.programme?.reunions || []).map(reu => ({
       numR: reu.numOfficiel || reu.numOrdre,
       hippo: reu.hippodrome?.libelleCourt || '?',
+      discipline: reu.disciplines?.[0] || '',
       courses: (reu.courses || []).map(c => ({
         numC: c.numOrdre,
         libelle: c.libelle || '',
         heure: c.heureDepart ? formatHeure(c.heureDepart) : '',
         numR: reu.numOfficiel || reu.numOrdre,
-        hippo: reu.hippodrome?.libelleCourt || '?',
-        distance: c.distance || 0,
+        discipline: c.discipline || c.specialite || '',
+        typePiste: c.typePiste || '',
         nbPartants: c.nombreDeclaresPartants || 0,
+        montantPrix: c.montantPrix || 0,
+        distance: c.distance || 0,
       }))
     }));
     renderReuBar();
     if (reunions.length > 0) selectReu(reunions[0]);
   } catch(e) {
-    console.error('Error loading reunions:', e);
-    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red);font-size:13px">❌ Erreur</div>`;
+    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red);font-size:13px">❌ Erreur: ${e.message}</div>`;
   }
+}
+
+function formatDiscipline(d) {
+  const map = {
+    'PLAT': '🏇 Plat', 'TROT_ATTELE': '🐎 Attelé', 'TROT_MONTE': '🏇 Monté',
+    'OBSTACLE': '🚧 Obstacle', 'HAIES': '🌿 Haies', 'STEEPLE': '🏔 Steeple'
+  };
+  return map[d] || d;
 }
 
 function formatHeure(ts) {
@@ -376,46 +439,86 @@ function selectCourseByIdx(numR, idx) {
   selectCourse(reu.courses[idx]);
 }
 
-// ══════════════════════════════════════════
-//  COURSE
-// ══════════════════════════════════════════
 async function selectCourse(c) {
   selCourse = c;
   checked = new Set();
+  arrivee = null;
   rapportsData = null;
   renderSidebar();
   document.getElementById('panel').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   document.getElementById('rapports-content').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   updateStats();
   await loadParticipants(c);
-  await loadRapports(c);
+  await Promise.all([loadParisTurf(c.numR, c.numC), loadArrivee(c), loadRecordsKm(c), loadRapports(c)]);
 }
 
 async function loadParticipants(c) {
   try {
-    const r = await fetch(`/api/programme/${ds()}/R${c.numR}/C${c.numC}/participants?specialisation=INTERNET`);
+    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/participants?specialisation=INTERNET'));
     const data = await r.json();
     participants = (data.participants || []).filter(p => !p.nonPartant);
-    renderPanel(c);
+    const body = document.getElementById('tbl-body');
+    if (body) {
+      renderRows();
+    } else {
+      renderPanel(c);
+    }
   } catch(e) {
-    console.error('Error loading participants:', e);
-    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur</div></div>';
+    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur de chargement</div></div>';
   }
+}
+
+async function loadParisTurf(numR, numC) {
+  const key = `R${numR}C${numC}`;
+  if (pronoCacheMap[key] !== undefined) return;
+  pronoCacheMap[key] = null;
+  try {
+    const r = await fetch(`/paristurf/${ds()}/${key}`);
+    const txt = await r.text();
+    if (txt && !txt.startsWith('<')) {
+      pronoCacheMap[key] = JSON.parse(txt);
+    }
+  } catch(e) {}
+  renderRows();
+}
+
+async function loadArrivee(c) {
+  try {
+    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/participants?specialisation=INTERNET'));
+    const data = await r.json();
+    const parts = data.participants || [];
+    const arrived = parts.filter(p => p.ordreArrivee).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
+    arrivee = arrived.length > 0 ? arrived : null;
+    renderArrivee();
+  } catch(e) {}
+}
+
+async function loadRecordsKm(c) {
+  if (!selCourse) return;
+  const key = `R${c.numR}C${c.numC}`;
+  if (recordsKm._key === key) return;
+  try {
+    const names = participants.map((p,i) => `${p.numPmu}=${encodeURIComponent(p.nom)}`).join('&');
+    const r = await fetch(`/records/${ds()}/${key}?${names}`);
+    const txt = await r.text();
+    if (txt && !txt.startsWith('<')) {
+      recordsKm = JSON.parse(txt);
+      recordsKm._key = key;
+      renderRows();
+    }
+  } catch(e) {}
 }
 
 async function loadRapports(c) {
   try {
-    const r = await fetch(`/api/programme/${ds()}/R${c.numR}/C${c.numC}/rapports-definitifs?specialisation=INTERNET&combinaisonEnTableau=true`);
+    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/rapports-definitifs?specialisation=INTERNET&combinaisonEnTableau=true'));
     const data = await r.json();
     rapportsData = data;
   } catch(e) {
-    console.log('Rapports not yet available:', e);
+    console.log('Rapports not available yet');
   }
 }
 
-// ══════════════════════════════════════════
-//  RENDER PANEL
-// ══════════════════════════════════════════
 function renderPanel(c) {
   const panel = document.getElementById('panel');
   panel.innerHTML = `
@@ -425,8 +528,11 @@ function renderPanel(c) {
         ${c.heure ? '<span class="tag bl">'+c.heure+'</span>' : ''}
         ${c.distance ? '<span class="tag">'+c.distance+'m</span>' : ''}
         ${c.nbPartants ? '<span class="tag">'+c.nbPartants+' partants</span>' : ''}
+        ${c.discipline ? '<span class="tag">'+formatDiscipline(c.discipline)+'</span>' : ''}
+        ${c.typePiste ? '<span class="tag">'+c.typePiste+'</span>' : ''}
       </div>
     </div>
+    <div id="paris-turf-bar"></div>
     <div id="arrivee-bar" class="arrivee-bar"></div>
     <div class="tbl-wrap">
       <table>
@@ -436,7 +542,8 @@ function renderPanel(c) {
             <th>N°</th>
             <th>Cheval</th>
             <th>Musique</th>
-            <th>Cote</th>
+            <th>Cote live</th>
+            <th>Record km</th>
             <th>Mise (€)</th>
             <th>Gain net</th>
           </tr>
@@ -446,6 +553,7 @@ function renderPanel(c) {
     </div>
   `;
   renderRows();
+  loadPronos(c);
   renderArrivee();
 }
 
@@ -453,6 +561,12 @@ function cote(p) {
   const c = p.dernierRapportDirect || {};
   const r = p.dernierRapportReference || {};
   return parseFloat(c.rapport || r.rapport) || 999;
+}
+
+function renderRecord(p) {
+  const rec = recordsKm[p.numPmu];
+  if (!rec) return '<span class="record-na">—</span>';
+  return `<span class="record-km">${rec}</span>`;
 }
 
 function renderRows() {
@@ -465,16 +579,25 @@ function renderRows() {
     const p = participants.find(x => x.numPmu === num);
     return s + (p ? 1 / (cote(p) || 1) : 0);
   }, 0) : 0;
+  const roundMode = document.getElementById('round-mode')?.value || 'nearest';
+  function roundMise(v) {
+    if (roundMode === 'down') return Math.floor(v);
+    if (roundMode === 'up') return Math.ceil(v);
+    if (roundMode === 'nearest') return Math.round(v);
+    return parseFloat(v.toFixed(2));
+  }
   
   body.innerHTML = participants.map(p => {
     const num = p.numPmu;
     const isChecked = checked.has(num);
     const c_val = cote(p);
     const coteStr = c_val < 900 ? c_val.toFixed(1) : '—';
-    const mise = (isChecked && nbChecked > 0 && sumInv > 0) ? Math.round(budget / (c_val * sumInv)) : 0;
+    const mise = (isChecked && nbChecked > 0 && sumInv > 0) ? roundMise(budget / (c_val * sumInv)) : 0;
     const miseReel = (isChecked && nbChecked > 0 && sumInv > 0) ? budget / (c_val * sumInv) : 0;
     const gainNet = isChecked && miseReel > 0 ? ((miseReel * c_val) - budget).toFixed(2) : '—';
     const miseAff = isChecked && miseReel > 0 ? (mise > 0 ? mise + '€' : '<1€') : '—';
+    const ordre = p.ordreArrivee;
+    const ordreHtml = ordre ? `<div style="font-size:10px;font-weight:700;margin-top:2px;color:${ordre===1?'#b45309':ordre===2?'#6b7280':ordre===3?'#ea580c':'var(--text3)'}">${ordre===1?'🥇':ordre===2?'🥈':ordre===3?'🥉':ordre+'e'}</div>` : '';
     
     return `<tr class="${isChecked ? 'sel' : ''}" onclick="toggleCheck(${num})">
       <td class="chk-col" onclick="event.stopPropagation()">
@@ -482,16 +605,12 @@ function renderRows() {
       </td>
       <td style="text-align:center">
         <span class="npill">${num}</span>
+        ${ordreHtml}
       </td>
-      <td>
-        <div class="hnom">${p.nom}</div>
-        <div class="hsub">${p.driver||p.jockey||''}</div>
-      </td>
+      <td><div class="hnom">${p.nom}</div><div class="hsub">${p.driver||p.jockey||''}</div></td>
       <td><div class="mus">${p.musique||'—'}</div></td>
-      <td>
-        <span class="cote-num">${coteStr}</span>
-        ${isToday && c_val < 900 ? '<span class="ldot"></span>' : ''}
-      </td>
+      <td><span class="cote-num">${coteStr}</span>${isToday && c_val < 900 ? '<span class="ldot"></span>' : ''}</td>
+      <td style="font-family:var(--mono);font-size:11px">${renderRecord(p)}</td>
       <td><span class="mise-num">${miseAff}</span></td>
       <td><span class="gain-num" style="color:${gainNet!=='—'?(parseFloat(gainNet)>=0?'var(--green)':'var(--red)'):'var(--text3)'}">${gainNet !== '—' ? (parseFloat(gainNet)>=0?'+':'')+gainNet+'€' : '—'}</span></td>
     </tr>`;
@@ -523,10 +642,18 @@ function updateStats() {
   }
   
   const budget = parseFloat(document.getElementById('budget')?.value || 20);
+  const roundMode = document.getElementById('round-mode')?.value || 'nearest';
+  function roundMise(v) {
+    if (roundMode === 'down') return Math.floor(v);
+    if (roundMode === 'up') return Math.ceil(v);
+    if (roundMode === 'nearest') return Math.round(v);
+    return parseFloat(v.toFixed(2));
+  }
+  
   const checked_parts = [...checked].map(num => participants.find(p => p.numPmu === num)).filter(Boolean);
   const sumInv = checked_parts.reduce((s, p) => s + 1/(cote(p)||1), 0);
   let totalMise = 0;
-  checked_parts.forEach(p => { totalMise += Math.round(budget / (cote(p) * sumInv)); });
+  checked_parts.forEach(p => { totalMise += roundMise(budget / (cote(p) * sumInv)); });
   const gainTheoriqueNet = budget - totalMise;
   
   document.getElementById('s-bud').textContent = totalMise + '€';
@@ -542,38 +669,42 @@ function renderArrivee() {
   const bar = document.getElementById('arrivee-bar');
   if (!bar) return;
   
-  const arrived = participants.filter(p => p.ordreArrivee).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
-  if (!arrived.length) {
-    bar.innerHTML = '<div class="arrivee-title">'
-      + '<span class="arrivee-dot"></span>Arrivée définitive</div>'
-      + '<div style="font-size:12px;color:var(--text3);font-style:italic;display:flex;align-items:center;gap:6px">'
-      + '<div class="spin" style="width:12px;height:12px;border-width:2px"></div>'
-      + 'En attente de l\'arrivée...</div>';
+  if (!arrivee || !arrivee.length) {
+    bar.innerHTML = '<div class="arrivee-title"><span class="arrivee-dot"></span>Arrivée définitive</div><div style="font-size:12px;color:var(--text3);font-style:italic;display:flex;align-items:center;gap:6px"><div class="spin" style="width:12px;height:12px;border-width:2px"></div>En attente...</div>';
     return;
   }
   
-  const top = arrived.slice(0, 5);
+  const top = arrivee.slice(0, 5);
   const chips = top.map(p => {
     const ordre = p.ordreArrivee;
     const cls = ordre === 1 ? 'p1' : ordre === 2 ? 'p2' : ordre === 3 ? 'p3' : '';
     const medal = ordre === 1 ? '🥇' : ordre === 2 ? '🥈' : ordre === 3 ? '🥉' : ordre + 'e';
-    const coteG = (p.dernierRapportDirect && parseFloat(p.dernierRapportDirect.rapport) > 0)
-      ? ' @' + parseFloat(p.dernierRapportDirect.rapport).toFixed(1) : '';
-    return '<div class="pos-chip ' + cls + '">'
-      + '<span class="pos-num">' + medal + '</span>'
-      + '<span class="pos-horse">N°' + p.numPmu + ' ' + p.nom + '</span>'
-      + (coteG ? '<span class="pos-cote">' + coteG + '</span>' : '')
-      + '</div>';
+    const coteG = (p.dernierRapportDirect && parseFloat(p.dernierRapportDirect.rapport) > 0) ? ' @' + parseFloat(p.dernierRapportDirect.rapport).toFixed(1) : '';
+    return '<div class="pos-chip ' + cls + '"><span class="pos-num">' + medal + '</span><span class="pos-horse">N°' + p.numPmu + ' ' + p.nom + '</span>' + (coteG ? '<span class="pos-cote">' + coteG + '</span>' : '') + '</div>';
   }).join('');
   
-  bar.innerHTML = '<div class="arrivee-title">'
-    + '<span class="arrivee-dot red"></span>Arrivée officielle</div>'
-    + '<div class="positions">' + chips + '</div>';
+  bar.innerHTML = '<div class="arrivee-title"><span class="arrivee-dot red"></span>Arrivée officielle</div><div class="positions">' + chips + '</div>';
 }
 
-// ══════════════════════════════════════════
-//  RAPPORTS DÉFINITIFS
-// ══════════════════════════════════════════
+async function loadPronos(c) {
+  const key = `R${c.numR}C${c.numC}`;
+  try {
+    const r = await fetch('/paristurf/' + ds() + '/' + key);
+    const txt = await r.text();
+    if (!txt || txt.startsWith('<')) return;
+    const data = JSON.parse(txt);
+    pronoCacheMap[key] = data;
+    if (data && data.tips && data.tips.length) {
+      const chips = data.tips.slice(0,5).map((t, i) => '<div class="eq-chip ' + (i===0?'base':'') + '" onclick="toggleCheck(' + t.num + ')"><span class="eq-pos">#' + t.rang + '</span><span class="eq-num">' + t.num + '</span><span>' + (t.nom||'') + '</span></div>').join('');
+      const ptBar = document.getElementById('paris-turf-bar');
+      if (ptBar) {
+        ptBar.innerHTML = '<div class="equidia-bar" style="margin-bottom:8px"><div class="equidia-title">📰 Pronos</div><div class="equidia-chips">' + chips + '</div></div>';
+      }
+      renderRows();
+    }
+  } catch(e) {}
+}
+
 function renderRapports() {
   const container = document.getElementById('rapports-content');
   if (!selCourse) {
@@ -588,56 +719,88 @@ function renderRapports() {
   
   const rapports = rapportsData.rapportsDefinitifs || rapportsData.rapportDefinitifs || [];
   if (!rapports.length) {
-    container.innerHTML = '<div class="empty"><div class="ico">🏆</div><div class="tit">Pas de résultats</div><div class="sub">Les rapports ne sont pas encore disponibles</div></div>';
+    container.innerHTML = '<div class="empty"><div class="ico">🏆</div><div class="tit">Pas de résultats</div><div class="sub">Rapports non disponibles</div></div>';
     return;
   }
   
-  let html = `
-    <div class="c-header">
-      <div class="c-title">🏆 Rapports Définitifs - R${selCourse.numR}C${selCourse.numC}</div>
-      <div class="tags">
-        <span class="tag bl">${selCourse.libelle}</span>
-      </div>
-    </div>
-    <div class="rapport-table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Sélection</th>
-            <th>Rapport</th>
-            <th>Montant Enjeux</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
+  let html = '<div class="c-header"><div class="c-title">🏆 Rapports Définitifs - R' + selCourse.numR + 'C' + selCourse.numC + '</div><div class="tags"><span class="tag bl">' + selCourse.libelle + '</span></div></div>';
+  html += '<div class="rapport-table-wrap"><table><thead><tr><th>Type</th><th>Sélection</th><th>Rapport</th><th>Enjeux</th></tr></thead><tbody>';
   
   rapports.forEach(r => {
     const type = r.typePari || r.type || '?';
     const selection = r.numerosGagnants?.join(', ') || r.selection || '?';
     const rapport = r.rapport || r.cote || '—';
     const montant = r.montantEnjeux || r.enjeux || '—';
-    
-    html += `<tr>
-      <td style="font-weight:600;font-family:var(--mono)">${type}</td>
-      <td style="font-weight:600">${selection}</td>
-      <td style="font-family:var(--mono);font-size:13px">${rapport}</td>
-      <td style="font-family:var(--mono)">${montant}</td>
-    </tr>`;
+    html += '<tr><td style="font-weight:600;font-family:var(--mono)">' + type + '</td><td style="font-weight:600">' + selection + '</td><td style="font-family:var(--mono);font-size:13px">' + rapport + '</td><td style="font-family:var(--mono)">' + montant + '</td></tr>';
   });
   
-  html += `
-        </tbody>
-      </table>
-    </div>
-  `;
-  
+  html += '</tbody></table></div>';
   container.innerHTML = html;
 }
 
-// ══════════════════════════════════════════
-//  REFRESH
-// ══════════════════════════════════════════
+function parseMusique(musique) {
+  if (!musique || musique === '—') return [];
+  const resultats = [];
+  const str = musique.replace(/\(\d+\)/g, '');
+  const matches = str.match(/[0-9Ddsm]/g) || [];
+  for (const m of matches) {
+    const n = parseInt(m);
+    if (!isNaN(n)) resultats.push(n);
+  }
+  return resultats;
+}
+
+function renderMusique() {
+  const container = document.getElementById('musique-content');
+  if (!container || !participants.length) {
+    container.innerHTML = '<div class="empty"><div class="ico">🎵</div><div class="tit">Sélectionnez une course</div></div>';
+    return;
+  }
+  
+  const MIN_COURSES = 4;
+  const scores = [];
+  const partants = participants.filter(p => !p.nonPartant);
+  const insuffisants = partants.filter(p => parseMusique(p.musique).length < MIN_COURSES);
+  
+  if (insuffisants.length > 0) {
+    container.innerHTML = '<div class="empty"><div class="ico">🎵</div><div class="tit">Analyse impossible</div><div class="sub">' + insuffisants.length + ' cheval(aux) ont moins de ' + MIN_COURSES + ' courses</div></div>';
+    return;
+  }
+  
+  for (const p of partants) {
+    const resultats = parseMusique(p.musique);
+    const nb = resultats.length;
+    const nb1 = resultats.filter(r => r === 1).length;
+    const nb2 = resultats.filter(r => r === 2).length;
+    const nb3 = resultats.filter(r => r === 3).length;
+    const score = nb1 * 3 + nb2 * 2 + nb3 * 1;
+    const pctVictoire = Math.round(nb1 / nb * 100);
+    const pctPodium = Math.round((nb1 + nb2 + nb3) / nb * 100);
+    scores.push({
+      num: p.numPmu, nom: p.nom,
+      nb, nb1, nb2, nb3,
+      score, pctVictoire, pctPodium,
+      cote: cote(p),
+    });
+  }
+  
+  scores.sort((a, b) => b.score - a.score || b.nb1 - a.nb1);
+  const maxScore = scores[0].score || 1;
+  
+  let html = '<div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)"><table style="width:100%;font-size:13px"><thead><tr style="background:var(--surface2);font-size:11px;text-transform:uppercase;color:var(--text3)"><th style="padding:10px 14px">Rang</th><th style="padding:10px 14px">N°</th><th style="padding:10px 14px">Cheval</th><th style="padding:10px 14px;text-align:center">Courses</th><th style="padding:10px 14px;text-align:center;color:var(--green)">1er</th><th style="padding:10px 14px;text-align:center;color:var(--text2)">2e</th><th style="padding:10px 14px;text-align:center;color:var(--orange)">3e</th><th style="padding:10px 14px;text-align:center">% Victoire</th><th style="padding:10px 14px;text-align:center">% Podium</th><th style="padding:10px 14px;text-align:center">Score</th><th style="padding:10px 14px;text-align:center">Cote</th></tr></thead><tbody>';
+  
+  scores.forEach((s, i) => {
+    const rang = i + 1;
+    const medal = rang === 1 ? '🥇' : rang === 2 ? '🥈' : rang === 3 ? '🥉' : rang;
+    const bg = rang === 1 ? 'background:#fef9c3' : rang === 2 ? 'background:#f3f4f6' : rang === 3 ? 'background:#fef3e8' : '';
+    const barW = Math.round(s.score / maxScore * 100);
+    html += '<tr style="' + bg + '"><td style="padding:10px 14px;font-size:16px;text-align:center">' + medal + '</td><td style="padding:10px 14px"><span class="npill">' + s.num + '</span></td><td style="padding:10px 14px;font-weight:600">' + s.nom + '<div style="margin-top:4px;height:4px;background:var(--surface2);border-radius:2px"><div style="height:4px;width:' + barW + '%;background:var(--accent);border-radius:2px"></div></div></td><td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + s.nb + '</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:700;color:var(--green)">' + s.nb1 + '</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:600;color:var(--text2)">' + s.nb2 + '</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:600;color:var(--orange)">' + s.nb3 + '</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + s.pctVictoire + '%</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + s.pctPodium + '%</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono);font-weight:700;color:var(--accent)">' + s.score + 'pts</td><td style="padding:10px 14px;text-align:center;font-family:var(--mono)">' + (s.cote < 900 ? s.cote.toFixed(1) : '—') + '</td></tr>';
+  });
+  
+  html += '</tbody></table></div>';
+  container.innerHTML = html;
+}
+
 function startCountdown() {
   clearInterval(refreshTimer);
   countdown = 20;
@@ -649,6 +812,7 @@ function startCountdown() {
       countdown = 20;
       if (isToday && selCourse) {
         await loadParticipants(selCourse);
+        await loadArrivee(selCourse);
         await loadRapports(selCourse);
       }
     }
@@ -658,6 +822,7 @@ function startCountdown() {
 async function manualRefresh() {
   if (selCourse) {
     await loadParticipants(selCourse);
+    await loadArrivee(selCourse);
     await loadRapports(selCourse);
   }
   countdown = 20;
