@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import hashlib
 import json
+import secrets
 
 # Scraping imports
 try:
@@ -153,7 +154,6 @@ def index():
 
 @app.route('/contact', methods=['GET', 'POST'])
 def contact():
-    # Le formulaire utilise Formspree, pas besoin de gérer le POST ici
     return render_template('contact.html')
 
 # ============================================
@@ -254,30 +254,24 @@ def forgot_password():
         try:
             user = User.query.filter_by(email=email).first()
             
-            if not user:
-                # Pour des raisons de sécurité, ne pas dire si l'email existe
-                return render_template('forgot_password.html', success='Si cet email existe, vous recevrez un lien de réinitialisation')
-            
-            # Générer un token unique
-            import secrets
-            reset_token = secrets.token_urlsafe(32)
-            user.reset_token = reset_token
-            user.reset_token_expires = datetime.now() + timedelta(hours=1)  # Expire en 1h
-            
-            db.session.commit()
-            
-            # Envoyer email avec le lien de reset
-            try:
-                if SENDGRID_API_KEY:
-                    sg = SendGridAPIClient(SENDGRID_API_KEY)
-                    
-                    reset_link = f"{request.host_url}reset-password/{reset_token}"
-                    
-                    message = Mail(
-                        from_email=SENDGRID_FROM_EMAIL,
-                        to_emails=user.email,
-                        subject='🔐 Réinitialiser votre mot de passe - Dutching Turf',
-                        plain_text_content=f"""Bonjour,
+            if user:
+                reset_token = secrets.token_urlsafe(32)
+                user.reset_token = reset_token
+                user.reset_token_expires = datetime.now() + timedelta(hours=1)
+                
+                db.session.commit()
+                
+                try:
+                    if SENDGRID_API_KEY:
+                        sg = SendGridAPIClient(SENDGRID_API_KEY)
+                        
+                        reset_link = f"{request.host_url}reset-password/{reset_token}"
+                        
+                        message = Mail(
+                            from_email=SENDGRID_FROM_EMAIL,
+                            to_emails=user.email,
+                            subject='🔐 Réinitialiser votre mot de passe - Dutching Turf',
+                            plain_text_content=f"""Bonjour,
 
 Vous avez demandé à réinitialiser votre mot de passe.
 
@@ -288,33 +282,33 @@ Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.
 
 ---
 Dutching Turf Team""",
-                        html_content=f"""
-                        <html>
-                            <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
-                                <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
-                                    <h1 style="color: #667eea; margin-bottom: 20px">🔐 Réinitialiser votre mot de passe</h1>
-                                    
-                                    <p style="color: #333; font-size: 16px; line-height: 1.6">Vous avez demandé à réinitialiser votre mot de passe Dutching Turf.</p>
-                                    
-                                    <p style="color: #333; margin: 20px 0">Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
-                                    
-                                    <div style="text-align: center; margin: 30px 0">
-                                        <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Réinitialiser le mot de passe</a>
+                            html_content=f"""
+                            <html>
+                                <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
+                                    <div style="background: white; border-radius: 10px; padding: 30px; max-width: 600px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1)">
+                                        <h1 style="color: #667eea; margin-bottom: 20px">🔐 Réinitialiser votre mot de passe</h1>
+                                        
+                                        <p style="color: #333; font-size: 16px; line-height: 1.6">Vous avez demandé à réinitialiser votre mot de passe Dutching Turf.</p>
+                                        
+                                        <p style="color: #333; margin: 20px 0">Cliquez sur le bouton ci-dessous pour créer un nouveau mot de passe :</p>
+                                        
+                                        <div style="text-align: center; margin: 30px 0">
+                                            <a href="{reset_link}" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Réinitialiser le mot de passe</a>
+                                        </div>
+                                        
+                                        <p style="color: #666; font-size: 14px">Ce lien expire dans 1 heure.</p>
+                                        
+                                        <p style="color: #999; font-size: 12px; margin-top: 20px">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.</p>
                                     </div>
-                                    
-                                    <p style="color: #666; font-size: 14px">Ce lien expire dans 1 heure.</p>
-                                    
-                                    <p style="color: #999; font-size: 12px; margin-top: 20px">Si vous n'avez pas demandé cette réinitialisation, vous pouvez ignorer cet email en toute sécurité.</p>
-                                </div>
-                            </body>
-                        </html>
-                        """
-                    )
-                    
-                    sg.send(message)
-                    print(f"[EMAIL] Reset link sent to {user.email}")
-            except Exception as email_err:
-                print(f"[EMAIL ERROR] {str(email_err)}")
+                                </body>
+                            </html>
+                            """
+                        )
+                        
+                        sg.send(message)
+                        print(f"[EMAIL] Reset link sent to {user.email}")
+                except Exception as email_err:
+                    print(f"[EMAIL ERROR] {str(email_err)}")
             
             return render_template('forgot_password.html', success='Si cet email existe, vous recevrez un lien de réinitialisation')
         
@@ -345,7 +339,6 @@ def reset_password(token):
             if len(password) < 6:
                 return render_template('reset_password.html', error='Le mot de passe doit faire au moins 6 caractères', token=token)
             
-            # Changer le mot de passe
             user.password = hashlib.sha256(password.encode()).hexdigest()
             user.reset_token = None
             user.reset_token_expires = None
@@ -458,7 +451,6 @@ def success():
         checkout_session = stripe.checkout.Session.retrieve(session_id)
         user_id = session['user_id']
         
-        # Récupérer l'utilisateur pour l'email
         user = User.query.get(user_id)
         if not user:
             return redirect(url_for('dashboard'))
@@ -472,13 +464,15 @@ def success():
         
         db.session.commit()
         
-        # 📧 Envoyer email de confirmation avec SendGrid
         try:
             if SENDGRID_API_KEY:
                 sg = SendGridAPIClient(SENDGRID_API_KEY)
                 
-                email_content = f"""
-Bonjour,
+                message = Mail(
+                    from_email=SENDGRID_FROM_EMAIL,
+                    to_emails=user.email,
+                    subject='✅ Bienvenue à Dutching Turf Premium !',
+                    plain_text_content=f"""Bonjour,
 
 Merci pour votre abonnement à Dutching Turf Premium ! 🎉
 
@@ -489,24 +483,12 @@ Merci pour votre abonnement à Dutching Turf Premium ! 🎉
 • Accès: Illimité au dashboard complet
 
 🚀 COMMENCEZ MAINTENANT:
-1. Allez sur: https://pmu-dutching-tool.onrender.com/dashboard
-2. Sélectionnez une course
-3. Analysez les chevaux avec l'outil musicale
-
-❓ BESOIN D'AIDE?
-Contactez-nous: https://pmu-dutching-tool.onrender.com/contact
+Allez sur votre dashboard pour commencer à analyser !
 
 À bientôt sur Dutching Turf! 🏇
 
 ---
-Dutching Turf Team
-                """
-                
-                message = Mail(
-                    from_email=SENDGRID_FROM_EMAIL,
-                    to_emails=user.email,
-                    subject='✅ Bienvenue à Dutching Turf Premium !',
-                    plain_text_content=email_content,
+Dutching Turf Team""",
                     html_content=f"""
                     <html>
                         <body style="font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px;">
@@ -523,11 +505,7 @@ Dutching Turf Team
                                     <p style="margin: 5px 0"><strong>Accès:</strong> Illimité ✅</p>
                                 </div>
                                 
-                                <div style="text-align: center; margin: 30px 0">
-                                    <a href="https://pmu-dutching-tool.onrender.com/dashboard" style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold">Aller au Dashboard</a>
-                                </div>
-                                
-                                <p style="color: #666; font-size: 14px">Besoin d'aide ? <a href="https://pmu-dutching-tool.onrender.com/contact" style="color: #667eea">Contactez-nous</a></p>
+                                <p style="color: #666; font-size: 14px">Besoin d'aide ? <a href="/contact" style="color: #667eea">Contactez-nous</a></p>
                             </div>
                         </body>
                     </html>
@@ -550,13 +528,12 @@ Dutching Turf Team
         return redirect(url_for('dashboard'))
 
 # ============================================
-# API ROUTES - SUBSCRIPTION INFO
+# API ROUTES
 # ============================================
 
 @app.route('/api/subscription-info')
 @login_required
 def subscription_info():
-    """Retourne les infos d'abonnement de l'utilisateur"""
     user_id = session['user_id']
     try:
         subscription = Subscription.query.filter_by(user_id=user_id).first()
@@ -583,14 +560,9 @@ def subscription_info():
         print(f"[ERROR] subscription_info: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ============================================
-# API ROUTES - PMU DATA (PREMIUM ONLY)
-# ============================================
-
 @app.route('/api/<path:path>')
 @premium_required
 def api_proxy(path):
-    """Proxy générique pour l'API PMU - Premium only"""
     try:
         url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
         if request.query_string:
@@ -611,112 +583,12 @@ def api_proxy(path):
         print(f"[API ERROR] {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/pmu/<path:path>')
-@premium_required
-def pmu_api(path):
-    """Proxy vers l'API PMU - Premium only (alternative route)"""
-    try:
-        url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
-        if request.query_string:
-            url += '?' + request.query_string.decode('utf-8')
-        
-        headers = {
-            "User-Agent": "Mozilla/5.0",
-            "Accept": "application/json"
-        }
-        
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            return jsonify(data)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ============================================
-# SCRAPING ROUTES (PREMIUM ONLY)
-# ============================================
-
-@app.route('/paristurf/<date_str>/<rc>')
-@premium_required
-def paristurf_pronos(date_str, rc):
-    """Pronos Paris-Turf"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({"tips": [], "records": {}}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({"tips": [], "records": {}}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        result = get_paristurf_pronos(date_str, num_r, num_c)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Paris-Turf: {str(e)}")
-        return jsonify({"tips": [], "records": {}}), 500
-
-@app.route('/records/<date_str>/<rc>')
-@premium_required
-def records_km(date_str, rc):
-    """Records km des chevaux"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        
-        horse_names = {}
-        for key, value in request.args.items():
-            try:
-                num = int(key)
-                horse_names[num] = value
-            except:
-                pass
-        
-        result = get_records_km(date_str, num_r, num_c, horse_names)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Records: {str(e)}")
-        return jsonify({}), 500
-
-@app.route('/turfomania/<date_str>/<rc>')
-@premium_required
-def turfomania_pronos(date_str, rc):
-    """Pronos Turfomania"""
-    if not SCRAPER_AVAILABLE:
-        return jsonify({"pronos": [], "source": "Turfomania"}), 503
-    
-    try:
-        import re
-        m = re.match(r'R(\d+)C(\d+)', rc)
-        if not m:
-            return jsonify({"pronos": []}), 400
-        
-        num_r, num_c = int(m.group(1)), int(m.group(2))
-        result = get_turfomania_pronos(date_str, num_r, num_c)
-        return jsonify(result)
-    except Exception as e:
-        print(f"[ERROR] Turfomania: {str(e)}")
-        return jsonify({"pronos": [], "source": "Turfomania"}), 500
-
-# ============================================
-# HEALTH CHECK
-# ============================================
-
 @app.route('/api/health')
 def health():
     return jsonify({
         'status': 'ok',
         'app': 'Dutching Turf',
-        'timestamp': datetime.now().isoformat(),
-        'scraper': SCRAPER_AVAILABLE,
-        'database': 'PostgreSQL'
+        'timestamp': datetime.now().isoformat()
     })
 
 # ============================================
