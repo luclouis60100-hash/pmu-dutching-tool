@@ -592,6 +592,79 @@ def health():
     })
 
 # ============================================
+# SCRAPING ROUTES (PREMIUM ONLY)
+# ============================================
+
+@app.route('/paristurf/<date_str>/<rc>')
+@premium_required
+def paristurf_pronos(date_str, rc):
+    """Pronos Paris-Turf"""
+    if not SCRAPER_AVAILABLE:
+        return jsonify({"tips": [], "records": {}}), 503
+    
+    try:
+        import re
+        m = re.match(r'R(\d+)C(\d+)', rc)
+        if not m:
+            return jsonify({"tips": [], "records": {}}), 400
+        
+        num_r, num_c = int(m.group(1)), int(m.group(2))
+        result = get_paristurf_pronos(date_str, num_r, num_c)
+        return jsonify(result)
+    except Exception as e:
+        print(f"[ERROR] Paris-Turf: {str(e)}")
+        return jsonify({"tips": [], "records": {}}), 500
+
+@app.route('/records/<date_str>/<rc>')
+@premium_required
+def records_km(date_str, rc):
+    """Records km des chevaux"""
+    if not SCRAPER_AVAILABLE:
+        return jsonify({}), 503
+    
+    try:
+        import re
+        m = re.match(r'R(\d+)C(\d+)', rc)
+        if not m:
+            return jsonify({}), 400
+        
+        num_r, num_c = int(m.group(1)), int(m.group(2))
+        
+        horse_names = {}
+        for key, value in request.args.items():
+            try:
+                num = int(key)
+                horse_names[num] = value
+            except:
+                pass
+        
+        result = get_records_km(date_str, num_r, num_c, horse_names)
+        return jsonify(result)
+    except Exception as e:
+        print(f"[ERROR] Records: {str(e)}")
+        return jsonify({}), 500
+
+@app.route('/turfomania/<date_str>/<rc>')
+@premium_required
+def turfomania_pronos(date_str, rc):
+    """Pronos Turfomania"""
+    if not SCRAPER_AVAILABLE:
+        return jsonify({"pronos": [], "source": "Turfomania"}), 503
+    
+    try:
+        import re
+        m = re.match(r'R(\d+)C(\d+)', rc)
+        if not m:
+            return jsonify({"pronos": []}), 400
+        
+        num_r, num_c = int(m.group(1)), int(m.group(2))
+        result = get_turfomania_pronos(date_str, num_r, num_c)
+        return jsonify(result)
+    except Exception as e:
+        print(f"[ERROR] Turfomania: {str(e)}")
+        return jsonify({"pronos": [], "source": "Turfomania"}), 500
+
+# ============================================
 # ERROR HANDLERS
 # ============================================
 
