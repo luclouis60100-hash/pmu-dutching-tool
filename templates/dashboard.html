@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dutching Turf - Premium</title>
+<title>Dutching PMU</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -99,20 +99,45 @@ th { padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 600; let
 td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f9fafb; }
+tr.sel td { background: var(--selected-bg); }
+tr.sel td:first-child { border-left: 3px solid var(--accent); }
+.chk-col { width: 38px; text-align: center; }
+input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
 .npill {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 26px; height: 26px; border-radius: 6px;
   background: var(--surface2); border: 1px solid var(--border);
   font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text2);
 }
-.ldr { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 2.5rem; color: var(--text3); font-size: 13px; }
-.spin { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
-@keyframes spin { to { transform: rotate(360deg); } }
-.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--text3); gap: 10px; text-align: center; }
-.empty .ico { font-size: 44px; }
-.empty .tit { font-size: 15px; font-weight: 500; color: var(--text2); }
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: var(--accent-text); }
+.hnom { font-weight: 600; font-size: 13px; }
+.hsub { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.mus { font-family: var(--mono); font-size: 11px; color: var(--text3); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cote-num { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+.ldot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--green); margin-left: 3px; vertical-align: middle; animation: blink 2s infinite; }
+.mise-num { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); }
+.gain-num { font-family: var(--mono); font-size: 13px; font-weight: 500; }
+.top-controls { display: grid; grid-template-columns: auto 1fr 1fr 1fr 1fr; gap: 10px; }
+.budget-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center;
+}
+.ctrl-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
+.budget-row { display: flex; align-items: baseline; gap: 4px; }
+.budget-row input {
+  font-size: 22px; font-family: var(--mono); font-weight: 500; color: var(--text);
+  background: transparent; border: none; outline: none; width: 80px; padding: 0;
+}
+.budget-row input::-webkit-inner-spin-button { display: none; }
+.eur { font-size: 15px; color: var(--text2); }
+.stat-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 12px 16px; box-shadow: var(--shadow);
+}
+.stat-val { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--text); }
+.stat-val.blue { color: var(--accent); }
+.stat-val.green { color: var(--green); }
+.stat-val.red { color: var(--red); }
 .arrivee-bar {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow);
@@ -140,23 +165,15 @@ tr:hover td { background: #f9fafb; }
 .pos-chip.p3 .pos-num { color: #ea580c; }
 .pos-horse { font-weight: 600; font-size: 12px; color: var(--text); }
 .pos-cote { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-.date-filter {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-}
-.date-filter-btn {
-  padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
-  background: var(--surface); font-size: 12px; font-weight: 500;
-  cursor: pointer; font-family: var(--font); color: var(--text2);
-  transition: all 0.12s;
-}
-.date-filter-btn:hover { border-color: var(--accent); color: var(--accent); }
-.date-filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
-.date-filter input[type=date] {
-  border: 1px solid var(--border); border-radius: 8px; padding: 5px 10px;
-  font-size: 12px; font-family: var(--font); color: var(--text);
-  background: var(--surface); cursor: pointer; outline: none;
-}
-.date-filter input[type=date]:focus { border-color: var(--accent); }
+.ldr { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 2.5rem; color: var(--text3); font-size: 13px; }
+.spin { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--text3); gap: 10px; text-align: center; }
+.empty .ico { font-size: 44px; }
+.empty .tit { font-size: 15px; font-weight: 500; color: var(--text2); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.rapport-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); margin-top: 1rem; }
 </style>
 </head>
 <body>
@@ -164,7 +181,7 @@ tr:hover td { background: #f9fafb; }
   <div style="display:flex;align-items:center;gap:0">
     <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching Turf</div>
     <button class="tab-btn active" id="tab-courses" onclick="switchTab('courses')">📋 Courses</button>
-    <button class="tab-btn" id="tab-rapports" onclick="switchTab('rapports')">🏆 Rapports Définitifs</button>
+    <button class="tab-btn" id="tab-rapports" onclick="switchTab('rapports')">🏆 Rapports</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <button id="btn-refresh" onclick="manualRefresh()" style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font)" title="Rafraîchir maintenant">
@@ -192,6 +209,19 @@ tr:hover td { background: #f9fafb; }
     <div class="ldr"><div class="spin"></div></div>
   </div>
   <div class="main">
+    <div class="top-controls">
+      <div class="budget-card">
+        <div class="ctrl-label">Budget</div>
+        <div class="budget-row">
+          <input type="number" id="budget" value="20" min="1" max="99999">
+          <span class="eur">€</span>
+        </div>
+      </div>
+      <div class="stat-card"><div class="ctrl-label">Chevaux cochés</div><div class="stat-val blue" id="s-nb">0</div></div>
+      <div class="stat-card"><div class="ctrl-label">Budget engagé</div><div class="stat-val" id="s-bud">—</div></div>
+      <div class="stat-card"><div class="ctrl-label">Gain théorique</div><div class="stat-val" id="s-gain">—</div></div>
+      <div class="stat-card"><div class="ctrl-label">Rentable ?</div><div class="stat-val" id="s-rent">—</div></div>
+    </div>
     <div id="panel">
       <div class="empty">
         <div class="ico">🏁</div>
@@ -203,7 +233,7 @@ tr:hover td { background: #f9fafb; }
 </div>
 </div><!-- /page-courses -->
 
-<!-- PAGE RAPPORTS DÉFINITIFS -->
+<!-- PAGE RAPPORTS -->
 <div id="page-rapports" style="display:none;padding:1.25rem;overflow-y:auto;height:calc(100vh - 56px)">
   <div id="rapports-content">
     <div class="empty">
@@ -219,7 +249,7 @@ tr:hover td { background: #f9fafb; }
 //  VARIABLES GLOBALES
 // ══════════════════════════════════════════
 let reunions = [], selReu = null, selCourse = null;
-let participants = [], rapportsData = null;
+let participants = [], checked = new Set(), rapportsData = null;
 let refreshTimer = null, countdown = 20, isToday = true;
 let filtreDate = 'today';
 
@@ -241,6 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const m = String(today.getMonth()+1).padStart(2,'0');
   const d = String(today.getDate()).padStart(2,'0');
   document.getElementById('date-picker').value = `${y}-${m}-${d}`;
+  document.getElementById('budget').addEventListener('change', updateStats);
   loadReunions();
   startCountdown();
 });
@@ -261,9 +292,10 @@ function changeDate(val) {
   const today = new Date().toISOString().slice(0,10);
   isToday = !val || val === today;
   reunions = []; selReu = null; selCourse = null;
-  participants = []; rapportsData = null;
+  participants = []; checked = new Set(); rapportsData = null;
   document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">🏁</div><div class="tit">Sélectionnez une réunion</div></div>';
   document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div></div>';
+  updateStats();
   loadReunions();
 }
 
@@ -293,7 +325,7 @@ async function loadReunions() {
     if (reunions.length > 0) selectReu(reunions[0]);
   } catch(e) {
     console.error('Error loading reunions:', e);
-    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red);font-size:13px">❌ Erreur: ${e.message}</div>`;
+    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red);font-size:13px">❌ Erreur</div>`;
   }
 }
 
@@ -349,10 +381,12 @@ function selectCourseByIdx(numR, idx) {
 // ══════════════════════════════════════════
 async function selectCourse(c) {
   selCourse = c;
+  checked = new Set();
   rapportsData = null;
   renderSidebar();
   document.getElementById('panel').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   document.getElementById('rapports-content').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
+  updateStats();
   await loadParticipants(c);
   await loadRapports(c);
 }
@@ -365,7 +399,7 @@ async function loadParticipants(c) {
     renderPanel(c);
   } catch(e) {
     console.error('Error loading participants:', e);
-    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur de chargement</div></div>';
+    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur</div></div>';
   }
 }
 
@@ -374,9 +408,8 @@ async function loadRapports(c) {
     const r = await fetch(`/api/programme/${ds()}/R${c.numR}/C${c.numC}/rapports-definitifs?specialisation=INTERNET&combinaisonEnTableau=true`);
     const data = await r.json();
     rapportsData = data;
-    console.log('Rapports data:', rapportsData);
   } catch(e) {
-    console.error('Error loading rapports:', e);
+    console.log('Rapports not yet available:', e);
   }
 }
 
@@ -399,9 +432,13 @@ function renderPanel(c) {
       <table>
         <thead>
           <tr>
+            <th class="chk-col"><input type="checkbox" id="chk-all" onchange="toggleAll(this.checked)"></th>
             <th>N°</th>
             <th>Cheval</th>
             <th>Musique</th>
+            <th>Cote</th>
+            <th>Mise (€)</th>
+            <th>Gain net</th>
           </tr>
         </thead>
         <tbody id="tbl-body"></tbody>
@@ -412,22 +449,93 @@ function renderPanel(c) {
   renderArrivee();
 }
 
+function cote(p) {
+  const c = p.dernierRapportDirect || {};
+  const r = p.dernierRapportReference || {};
+  return parseFloat(c.rapport || r.rapport) || 999;
+}
+
 function renderRows() {
   const body = document.getElementById('tbl-body');
   if (!body || !participants.length) return;
   
+  const budget = parseFloat(document.getElementById('budget')?.value || 20);
+  const nbChecked = checked.size;
+  const sumInv = nbChecked > 0 ? [...checked].reduce((s, num) => {
+    const p = participants.find(x => x.numPmu === num);
+    return s + (p ? 1 / (cote(p) || 1) : 0);
+  }, 0) : 0;
+  
   body.innerHTML = participants.map(p => {
-    const ordre = p.ordreArrivee;
-    const ordreHtml = ordre ? `<span style="font-weight:700;color:${ordre===1?'#b45309':ordre===2?'#6b7280':ordre===3?'#ea580c':'var(--text3)'}">${ordre===1?'🥇':ordre===2?'🥈':ordre===3?'🥉':ordre+'e'}</span>` : '';
-    return `<tr>
-      <td style="text-align:center">
-        <span class="npill">${p.numPmu}</span>
-        ${ordreHtml ? '<div style="font-size:11px;margin-top:4px">'+ordreHtml+'</div>' : ''}
+    const num = p.numPmu;
+    const isChecked = checked.has(num);
+    const c_val = cote(p);
+    const coteStr = c_val < 900 ? c_val.toFixed(1) : '—';
+    const mise = (isChecked && nbChecked > 0 && sumInv > 0) ? Math.round(budget / (c_val * sumInv)) : 0;
+    const miseReel = (isChecked && nbChecked > 0 && sumInv > 0) ? budget / (c_val * sumInv) : 0;
+    const gainNet = isChecked && miseReel > 0 ? ((miseReel * c_val) - budget).toFixed(2) : '—';
+    const miseAff = isChecked && miseReel > 0 ? (mise > 0 ? mise + '€' : '<1€') : '—';
+    
+    return `<tr class="${isChecked ? 'sel' : ''}" onclick="toggleCheck(${num})">
+      <td class="chk-col" onclick="event.stopPropagation()">
+        <input type="checkbox" ${isChecked?'checked':''} onchange="toggleCheck(${num})">
       </td>
-      <td style="font-weight:600">${p.nom}</td>
-      <td style="font-size:11px;color:var(--text3)">${p.musique || '—'}</td>
+      <td style="text-align:center">
+        <span class="npill">${num}</span>
+      </td>
+      <td>
+        <div class="hnom">${p.nom}</div>
+        <div class="hsub">${p.driver||p.jockey||''}</div>
+      </td>
+      <td><div class="mus">${p.musique||'—'}</div></td>
+      <td>
+        <span class="cote-num">${coteStr}</span>
+        ${isToday && c_val < 900 ? '<span class="ldot"></span>' : ''}
+      </td>
+      <td><span class="mise-num">${miseAff}</span></td>
+      <td><span class="gain-num" style="color:${gainNet!=='—'?(parseFloat(gainNet)>=0?'var(--green)':'var(--red)'):'var(--text3)'}">${gainNet !== '—' ? (parseFloat(gainNet)>=0?'+':'')+gainNet+'€' : '—'}</span></td>
     </tr>`;
   }).join('');
+  
+  updateStats();
+}
+
+function toggleCheck(num) {
+  if (checked.has(num)) checked.delete(num);
+  else checked.add(num);
+  renderRows();
+}
+
+function toggleAll(v) {
+  if (v) participants.forEach(p => checked.add(p.numPmu));
+  else checked.clear();
+  renderRows();
+}
+
+function updateStats() {
+  const nb = checked.size;
+  document.getElementById('s-nb').textContent = nb;
+  if (nb === 0) {
+    document.getElementById('s-bud').textContent = '—';
+    document.getElementById('s-gain').textContent = '—';
+    document.getElementById('s-rent').textContent = '—';
+    return;
+  }
+  
+  const budget = parseFloat(document.getElementById('budget')?.value || 20);
+  const checked_parts = [...checked].map(num => participants.find(p => p.numPmu === num)).filter(Boolean);
+  const sumInv = checked_parts.reduce((s, p) => s + 1/(cote(p)||1), 0);
+  let totalMise = 0;
+  checked_parts.forEach(p => { totalMise += Math.round(budget / (cote(p) * sumInv)); });
+  const gainTheoriqueNet = budget - totalMise;
+  
+  document.getElementById('s-bud').textContent = totalMise + '€';
+  document.getElementById('s-gain').textContent = (gainTheoriqueNet >= 0 ? '+' : '') + gainTheoriqueNet.toFixed(2) + '€';
+  
+  const rentable = gainTheoriqueNet >= 0;
+  const rentEl = document.getElementById('s-rent');
+  rentEl.textContent = rentable ? '✓ Oui' : '✗ Non';
+  rentEl.className = 'stat-val ' + (rentable ? 'green' : 'red');
 }
 
 function renderArrivee() {
@@ -491,7 +599,7 @@ function renderRapports() {
         <span class="tag bl">${selCourse.libelle}</span>
       </div>
     </div>
-    <div class="tbl-wrap">
+    <div class="rapport-table-wrap">
       <table>
         <thead>
           <tr>
