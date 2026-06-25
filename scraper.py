@@ -251,3 +251,71 @@ def get_turfomania_pronos(date_str, num_r, num_c):
     except Exception as e:
         print(f"[Erreur Turfomania] {str(e)}")
         return {"pronos": [], "source": "Turfomania"}
+
+# ============================================
+# RÉSULTATS ET COTES
+# ============================================
+
+def get_race_results(date_str, num_r, num_c):
+    """Récupère les résultats définitifs et cotes depuis l'API PMU"""
+    try:
+        # Format date : YYYYMMDD → convertir en date_str pour l'API
+        # Exemple : 25062026 (DDMMYYYY dans date_str) → à transformer
+        
+        # Construire l'URL API PMU
+        api_url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date_str}/R{num_r}/C{num_c}/rapports-definitifs?specialisation=INTERNET&combinaisonEnTableau=true"
+        
+        print(f"[Race Results] Fetching: {api_url[-80:]}")
+        
+        sess = requests.Session()
+        sess.headers.update(PARISTURF_HEADERS)
+        
+        r = sess.get(api_url, timeout=15)
+        
+        if r.status_code != 200:
+            print(f"[Race Results] HTTP {r.status_code}")
+            return {"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "error"}
+        
+        data = r.json()
+        if not isinstance(data, list):
+            return {"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "error"}
+        
+        result = {
+            "arrivee": [],
+            "cotes_gagnant": {},
+            "cotes_place": {},
+            "status": "success"
+        }
+        
+        # Extraire les cotes
+        for pari_group in data:
+            type_pari = pari_group.get("typePari", "")
+            rapports = pari_group.get("rapports", [])
+            
+            # Simple Gagnant
+            if type_pari == "E_SIMPLE_GAGNANT":
+                for rapport in rapports:
+                    combinaison = rapport.get("combinaison", [])
+                    dividende = rapport.get("dividendePourUnEuro", 0)
+                    if combinaison:
+                        num = combinaison[0]
+                        result["cotes_gagnant"][num] = round(dividende / 100, 2)
+            
+            # Simple Placé
+            elif type_pari == "E_SIMPLE_PLACE":
+                for rapport in rapports:
+                    combinaison = rapport.get("combinaison", [])
+                    dividende = rapport.get("dividendePourUnEuro", 0)
+                    if combinaison:
+                        num = combinaison[0]
+                        if num not in result["cotes_place"]:
+                            result["cotes_place"][num] = round(dividende / 100, 2)
+        
+        print(f"[✓] Race Results R{num_r}C{num_c}: {len(result['cotes_gagnant'])} gagnant, {len(result['cotes_place'])} placé")
+        return result
+    
+    except Exception as e:
+        print(f"[Erreur Race Results] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "error"}

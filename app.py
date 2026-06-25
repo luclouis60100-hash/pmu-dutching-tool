@@ -756,6 +756,30 @@ def turfomania_pronos(date_str, rc):
         return jsonify({"pronos": [], "source": "Turfomania"}), 500
 
 # ============================================
+# RACE RESULTS ROUTE
+# ============================================
+
+@app.route('/results/<date_str>/<rc>')
+@premium_required
+def race_results(date_str, rc):
+    """Résultats définitifs et cotes"""
+    if not SCRAPER_AVAILABLE:
+        return jsonify({"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "unavailable"}), 503
+    
+    try:
+        import re
+        m = re.match(r'R(\d+)C(\d+)', rc)
+        if not m:
+            return jsonify({"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "invalid_format"}), 400
+        
+        num_r, num_c = int(m.group(1)), int(m.group(2))
+        result = get_race_results(date_str, num_r, num_c)
+        return jsonify(result)
+    except Exception as e:
+        print(f"[ERROR] Race Results: {str(e)}")
+        return jsonify({"arrivee": [], "cotes_gagnant": {}, "cotes_place": {}, "status": "error"}), 500
+
+# ============================================
 # ERROR HANDLERS
 # ============================================
 
