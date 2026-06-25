@@ -612,6 +612,16 @@ th.sortable.active { color: var(--accent); }
   </div>
 </div>
 
+<div id="page-rapports" style="display:none;padding:1.25rem;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
+    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🏆 Résultats Définitifs</div>
+    <div style="font-size:12px;color:var(--text3)">Arrivée officielle avec cotes gagnant et placé</div>
+  </div>
+  <div id="rapports-content">
+    <div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div><div class="sub">Les résultats apparaîtront ici</div></div>
+  </div>
+</div>
+
 <script>
 // ══════════════════════════════════════════
 //  VARIABLES GLOBALES
@@ -648,13 +658,6 @@ document.addEventListener('DOMContentLoaded', () => {
   startCountdown();
 });
 
-    <div id="page-rapports" style="display:none;padding:1.25rem;display:none;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
-      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🏆 Résultats Définitifs</div>
-      <div id="rapports-container" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;">
-        <div id="rapports-content" style="color:var(--text-dim);text-align:center;padding:2rem">Sélectionnez une course pour voir les résultats</div>
-      </div>
-    </div>
-
 function switchTab(tab) {
   document.getElementById('page-courses').style.display = tab === 'courses' ? 'flex' : 'none';
   document.getElementById('tab-courses').className = 'tab-btn' + (tab === 'courses' ? ' active' : '');
@@ -668,79 +671,6 @@ function switchTab(tab) {
 
 function parseMusique(musique) {
   if (!musique || musique === '—') return [];
-  const courses = musique.match(/\d+/g) || [];
-  return courses;
-}
-
-// ══════════════════════════════════════════
-// RAPPORTS DÉFINITIFS
-// ══════════════════════════════════════════
-
-async function loadRapports() {
-  const c = window.currentCourse;
-  if (!c) {
-    document.getElementById('rapports-content').innerHTML = '<div style="color:var(--text-dim)">Sélectionnez une course</div>';
-    return;
-  }
-
-  const dateInput = document.getElementById('date-picker').value;
-  const [y, m, d] = dateInput.split('-');
-  const dateStr = y + m + d; // YYYYMMDD
-  const key = `R${c.numR}C${c.numC}`;
-
-  document.getElementById('rapports-content').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-dim)">⏳ Chargement...</div>';
-
-  try {
-    const r = await fetch(`/results/${dateStr}/${key}`);
-    const data = await r.json();
-
-    if (data.status !== 'success') {
-      document.getElementById('rapports-content').innerHTML = '<div style="color:var(--error)">Aucun résultat disponible</div>';
-      return;
-    }
-
-    let html = '<div style="display:flex;flex-direction:column;gap:1rem">';
-    
-    // Tableau des résultats
-    html += '<table style="width:100%;border-collapse:collapse">';
-    html += '<tr style="background:var(--surface2);border-bottom:2px solid var(--border)">';
-    html += '<th style="padding:0.75rem;text-align:left;color:var(--accent);font-weight:700">Position</th>';
-    html += '<th style="padding:0.75rem;text-align:left;color:var(--accent);font-weight:700">N° Cheval</th>';
-    html += '<th style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">Cote Gagnant</th>';
-    html += '<th style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">Cote Placé</th>';
-    html += '</tr>';
-
-    const arrivee = Object.keys(data.cotes_gagnant).sort((a,b) => parseInt(a) - parseInt(b));
-    let position = 1;
-
-    // Afficher d'abord les chevaux avec cotes
-    for (const num of arrivee) {
-      const coteGagnant = data.cotes_gagnant[num] || '—';
-      const cotePlace = data.cotes_place[num] || '—';
-      const style = position === 1 ? 'background:#ffd700;font-weight:700' : position === 2 ? 'background:#c0c0c0;font-weight:700' : position === 3 ? 'background:#cd7f32;font-weight:700' : '';
-      
-      html += `<tr style="${style};border-bottom:1px solid var(--border)">`;
-      html += `<td style="padding:0.75rem;text-align:left">${position}${position === 1 ? ' 🥇' : position === 2 ? ' 🥈' : position === 3 ? ' 🥉' : ''}</td>`;
-      html += `<td style="padding:0.75rem;text-align:left;font-weight:700">N°${num}</td>`;
-      html += `<td style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">${coteGagnant}</td>`;
-      html += `<td style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">${cotePlace}</td>`;
-      html += '</tr>';
-      position++;
-    }
-
-    html += '</table>';
-    html += '</div>';
-
-    document.getElementById('rapports-content').innerHTML = html;
-
-    // Auto-refresh toutes les 30 secondes
-    setTimeout(loadRapports, 30000);
-
-  } catch (err) {
-    console.error('Error loading rapports:', err);
-    document.getElementById('rapports-content').innerHTML = '<div style="color:var(--error)">Erreur lors du chargement</div>';
-  }
-}
   // Extraire les chiffres et lettres : 1a, 2a, Da, 0a, (25)1a etc.
   // On cherche les résultats : chiffres 0-9 ou D (disqualifié) avant a/p/m/h
   const resultats = [];
@@ -1031,16 +961,11 @@ async function selectCourse(c) {
   selCourse = c;
   checked = new Set();
   arrivee = null;
-  window.currentCourse = c;  // Ajouter la course courante
   renderSidebar();
   document.getElementById('panel').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   updateStats();
   await loadParticipants(c);
   await Promise.all([loadParisTurf(c.numR, c.numC), loadArrivee(c), loadRecordsKm(c)]);
-  // Charger les rapports si l'onglet est visible
-  if (document.getElementById('page-rapports').style.display !== 'none') {
-    loadRapports();
-  }
 }
 
 async function loadParticipants(c) {
@@ -1542,6 +1467,69 @@ async function manualRefresh() {
     await loadArrivee(selCourse);
   }
   countdown = 20;
+}
+
+// ══════════════════════════════════════════
+// RAPPORTS DÉFINITIFS
+// ══════════════════════════════════════════
+async function loadRapports() {
+  const c = selCourse;
+  if (!c) {
+    document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">🏆</div><div class="tit">Sélectionnez une course</div></div>';
+    return;
+  }
+
+  const dateInput = document.getElementById('date-picker').value;
+  const [y, m, d] = dateInput.split('-');
+  const dateStr = y + m + d;
+  const key = `R${c.numR}C${c.numC}`;
+
+  document.getElementById('rapports-content').innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-dim)">⏳ Chargement...</div>';
+
+  try {
+    const r = await fetch(`/results/${dateStr}/${key}`);
+    const data = await r.json();
+
+    if (data.status !== 'success' || Object.keys(data.cotes_gagnant).length === 0) {
+      document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">📋</div><div class="tit">Aucun résultat</div><div class="sub">Cette course n\'a pas de résultats définitifs</div></div>';
+      return;
+    }
+
+    let html = '<table style="width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden">';
+    html += '<tr style="background:var(--surface2)">';
+    html += '<th style="padding:0.75rem;text-align:left;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">Pos</th>';
+    html += '<th style="padding:0.75rem;text-align:left;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">N°</th>';
+    html += '<th style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">Cote G.</th>';
+    html += '<th style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700;border-bottom:2px solid var(--border)">Cote P.</th>';
+    html += '</tr>';
+
+    const chevaux = Object.keys(data.cotes_gagnant).sort((a,b) => parseInt(a) - parseInt(b));
+    let pos = 1;
+
+    for (const num of chevaux) {
+      const cG = data.cotes_gagnant[num] || '—';
+      const cP = data.cotes_place[num] || '—';
+      const ico = pos === 1 ? '🥇' : pos === 2 ? '🥈' : pos === 3 ? '🥉' : '';
+      const bg = pos <= 3 ? 'background:var(--surface2);font-weight:700;' : '';
+      
+      html += `<tr style="${bg}border-bottom:1px solid var(--border)">`;
+      html += `<td style="padding:0.75rem;color:var(--accent);font-weight:700">${pos} ${ico}</td>`;
+      html += `<td style="padding:0.75rem;font-weight:700">N°${num}</td>`;
+      html += `<td style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">${cG}</td>`;
+      html += `<td style="padding:0.75rem;text-align:center;color:var(--accent);font-weight:700">${cP}</td>`;
+      html += '</tr>';
+      pos++;
+    }
+
+    html += '</table>';
+    document.getElementById('rapports-content').innerHTML = html;
+
+    setTimeout(loadRapports, 30000);
+
+  } catch (err) {
+    console.error('Error:', err);
+    document.getElementById('rapports-content').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur</div></div>';
+  }
 }
 </script>
 </body>
