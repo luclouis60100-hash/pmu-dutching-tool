@@ -9,11 +9,12 @@ import urllib.request
 from datetime import datetime, timedelta
 from functools import wraps
 import hashlib
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+import requests
+from bs4 import BeautifulSoup
+import re
+import unicodedata
 
 # Configuration
 app = Flask(__name__)
@@ -30,16 +31,30 @@ MAIL_USERNAME = os.environ.get('MAIL_USERNAME', 'noreply@pmu-dutching.app')
 # Database
 DB_FILE = 'pmu_users.db'
 
+# Headers
+PARISTURF_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml",
+    "Accept-Language": "fr-FR,fr;q=0.9",
+    "Referer": "https://www.paris-turf.com/",
+}
+
+TURFOMANIA_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml",
+    "Accept-Language": "fr-FR,fr;q=0.9",
+    "Referer": "https://www.turfomania.fr/",
+}
+
 # ============================================
 # DATABASE SETUP
 # ============================================
 
 def init_db():
-    """Initialize database with users and subscriptions tables"""
+    """Initialize database"""
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     
-    # Users table
     c.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -49,7 +64,6 @@ def init_db():
         )
     ''')
     
-    # Subscriptions table
     c.execute('''
         CREATE TABLE IF NOT EXISTS subscriptions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -63,7 +77,6 @@ def init_db():
         )
     ''')
     
-    # Password reset tokens
     c.execute('''
         CREATE TABLE IF NOT EXISTS password_resets (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,17 +94,222 @@ def init_db():
 init_db()
 
 # ============================================
+# SCRAPERS - PARIS-TURF & RECORDS
+# ============================================
+
+def slugify(s):
+    """Convertir une chaîne en slug"""
+    s = s.lower().strip()
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    s = re.sub(r"[^a-z0-9\s-]", "", s)
+    s = re.sub(r"\s+", "-", s)
+    s = re.sub(r"-+", "-", s).strip("-")
+    return s
+
+def get_paristurf_data(date_str, num_r, num_c):
+    """Récupère les pronos et records Paris-Turf"""
+    try:
+        sess = requests.Session()
+        sess.headers.update(PARISTURF_HEADERS)
+        
+        date_fmt_pt = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]}"
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        
+        if date_fmt_pt == today_str:
+            pt_home = "https://www.paris-turf.com/"
+        else:
+            pt_home = f"https://www.paris-turf.com/programme-courses/{date_fmt_pt}"
+        
+        print(f"[Paris-Turf] Chargement: {pt_home}")
+        
+        r0 = sess.get(pt_home, timeout=15)
+        soup0 = BeautifulSoup(r0.text, "html.parser")
+        
+        script0 = soup0.find("script", id="__NEXT_DATA__")
+        if not script0:
+            return {"tips": [], "records": {}}
+        
+        data0 = json.loads(script0.string)
+        state0 = data0.get("props", {}).get("pageProps", {}).get("initialState", {})
+        rcs = state0.get("raceCardsState", {})
+        
+        all_meetings = rcs.get("meetings", {})
+        all_races = rcs.get("races", {})
+        
+        meetings = []
+        races = []
+        found_date = None
+        
+        for d_key in all_meetings:
+            m_list = all_meetings[d_key]
+            hit = next((m for m in m_list if m.get("pmuNumber") == num_r), None)
+            if hit:
+                meetings = m_list
+                races = all_races.get(d_key, [])
+                found_date = d_key
+                break
+        
+        if not found_date:
+            print(f"[Paris-Turf] Meeting R{num_r} non trouvé")
+            return {"tips": [], "records": {}}
+        
+        target_meeting = next((m for m in meetings if m.get("pmuNumber") == num_r), None)
+        if not target_meeting:
+            return {"tips": [], "records": {}}
+        
+        meet_id = target_meeting["id"]
+        meet_name = target_meeting.get("name", "")
+        
+        target_race = next((r for r in races if r.get("meetingId") == meet_id and r.get("number") == num_c), None)
+        if not target_race:
+            return {"tips": [], "records": {}}
+        
+        race_uuid = target_race.get("uuid", "")
+        race_name = target_race.get("name", "")
+        race_id = str(target_race.get("id", ""))
+        
+        pt_url = f"https://www.paris-turf.com/course/{slugify(meet_name)}-{slugify(race_name)}-idc-{race_uuid}"
+        print(f"[Paris-Turf] R{num_r}C{num_c}: {pt_url[-60:]}")
+        
+        r1 = sess.get(pt_url, timeout=15)
+        soup1 = BeautifulSoup(r1.text, "html.parser")
+        script1 = soup1.find("script", id="__NEXT_DATA__")
+        
+        if not script1:
+            return {"tips": [], "records": {}}
+        
+        data1 = json.loads(script1.string)
+        state1 = data1.get("props", {}).get("pageProps", {}).get("initialState", {})
+        cur = state1.get("currentPageState", {})
+        
+        # Extraire les tips
+        web_tips = cur.get("webTips") or {}
+        tips_raw = web_tips.get("tips", {})
+        tips = []
+        
+        for cat in ["A", "S", "C", "O", "G"]:
+            t = tips_raw.get(cat)
+            if not t:
+                continue
+            saddles = [int(x.strip()) for x in t.get("saddleList", "").split(",") if x.strip()]
+            names = [x.strip() for x in t.get("nameList", "").split(",")]
+            label = t.get("typeLabelParisTurf", cat)
+            
+            for i, num in enumerate(saddles):
+                tips.append({
+                    "rang": len(tips) + 1,
+                    "num": num,
+                    "nom": names[i] if i < len(names) else f"N°{num}",
+                    "categorie": label,
+                    "cat": cat
+                })
+                if len(tips) >= 5:
+                    break
+            if len(tips) >= 5:
+                break
+        
+        # Extraire les records
+        recs = {}
+        runners_data = state1.get("raceCardsState", {}).get("runners", {})
+        
+        print(f"[DEBUG] race_id = {race_id}")
+        
+        if race_id in runners_data:
+            print(f"[DEBUG] Found {len(runners_data[race_id])} runners")
+            
+            for idx, runner in enumerate(runners_data[race_id]):
+                hnum = None
+                for field in ["horseNumber", "number", "saddle", "saddleNumber", 
+                             "saddle_number", "runnerNumber", "runnernumber", 
+                             "position", "saddleCloth"]:
+                    val = runner.get(field)
+                    if val is not None and isinstance(val, int) and val > 0 and val < 100:
+                        hnum = val
+                        print(f"[DEBUG]   ✓ Using {field} as hnum = {hnum}")
+                        break
+                
+                if not hnum:
+                    continue
+                
+                # Chercher les records
+                for rtype in ["harness", "distance", "flat"]:
+                    rec = (runner.get("records") or {}).get(rtype, {})
+                    redkm = rec.get("redkm") if rec else None
+                    if redkm:
+                        recs[hnum] = redkm
+                        print(f"[DEBUG]   Saved: {hnum} = {redkm} ({rtype})")
+                        break
+        
+        result = {
+            "tips": tips,
+            "records": recs,
+            "author": web_tips.get("author", "Paris-Turf"),
+            "text": (web_tips.get("text", "") or "")[:200]
+        }
+        
+        print(f"[✓] Paris-Turf R{num_r}C{num_c}: {len(tips)} tips, {len(recs)} records")
+        return result
+    
+    except Exception as e:
+        print(f"[Erreur Paris-Turf] {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"tips": [], "records": {}}
+
+def get_turfomania_pronos(date_str, num_r, num_c):
+    """Pronos Turfomania"""
+    try:
+        sess = requests.Session()
+        sess.headers.update(TURFOMANIA_HEADERS)
+        
+        d = datetime.strptime(date_str, "%d%m%Y")
+        jour = d.strftime("%A").lower()[:3]
+        mois = d.strftime("%B").lower()[:3]
+        
+        urls = [
+            f"https://www.turfomania.fr/pronostics-pmu-{date_str[4:8]}{date_str[2:4]}{date_str[0:2]}-r{num_r}-c{num_c}.html",
+            f"https://www.turfomania.fr/pronostics/{jour}-{d.day:02d}-{mois}-{d.year}/r{num_r}-c{num_c}",
+        ]
+        
+        for url in urls:
+            try:
+                print(f"[Turfomania] Essai: {url[-60:]}")
+                r = sess.get(url, timeout=10)
+                soup = BeautifulSoup(r.text, "html.parser")
+                pronos = []
+                
+                pattern = r'N°\s*(\d+)\s*(?:-\s*)?([A-Z][A-Za-z\s-]*)'
+                for match in re.finditer(pattern, r.text):
+                    num = int(match.group(1))
+                    nom = match.group(2).strip()
+                    pronos.append({"num": num, "nom": nom})
+                
+                if pronos:
+                    print(f"[✓] Turfomania R{num_r}C{num_c}: {len(pronos)}")
+                    return {"pronos": pronos[:5], "source": "Turfomania"}
+            
+            except Exception as e:
+                print(f"[Turfomania] Erreur: {e}")
+                continue
+        
+        return {"pronos": [], "source": "Turfomania"}
+    
+    except Exception as e:
+        print(f"[Erreur Turfomania] {str(e)}")
+        return {"pronos": [], "source": "Turfomania"}
+
+# ============================================
 # EMAIL HELPER
 # ============================================
 
 def send_email(to_email, subject, body_html):
     """Send email via SendGrid API"""
     if not SENDGRID_API_KEY:
-        print(f"[WARNING] SendGrid not configured. Email would be sent to {to_email}")
+        print(f"[WARNING] SendGrid not configured")
         return True
     
     try:
-        import requests
         url = "https://api.sendgrid.com/v3/mail/send"
         headers = {
             "Authorization": f"Bearer {SENDGRID_API_KEY}",
@@ -111,7 +329,7 @@ def send_email(to_email, subject, body_html):
         return False
 
 # ============================================
-# SCHEDULER - EMAIL REMINDERS
+# SCHEDULER
 # ============================================
 
 def send_expiry_reminders():
@@ -119,8 +337,6 @@ def send_expiry_reminders():
     try:
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        
-        # Find subscriptions expiring in 7 days
         target_date = (datetime.now() + timedelta(days=7)).date()
         c.execute('''
             SELECT u.email, s.access_expires_at 
@@ -134,18 +350,11 @@ def send_expiry_reminders():
         
         for email, expires_at in users:
             subject = "Votre abonnement PMU Dutching expire bientôt ⏰"
-            body = f"""
-            <p>Bonjour,</p>
-            <p>Votre abonnement premium expires le <strong>{expires_at}</strong>.</p>
-            <p>Pour continuer à accéder au tableau d'analyse, <a href="https://pmu-dutching.app/pricing">cliquez ici pour renouveler</a>.</p>
-            <p>Bonne chance ! 🏇</p>
-            """
+            body = f"<p>Votre abonnement expires le <strong>{expires_at}</strong>.</p>"
             send_email(email, subject, body)
-            print(f"[REMINDER] Sent to {email}")
     except Exception as e:
         print(f"[SCHEDULER ERROR] {str(e)}")
 
-# Start scheduler
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=send_expiry_reminders, trigger="cron", hour=9, minute=0)
 scheduler.start()
@@ -234,8 +443,6 @@ def signup():
             
         except sqlite3.IntegrityError:
             return render_template('signup.html', error='Cet email est déjà inscrit')
-        except Exception as e:
-            return render_template('signup.html', error=f'Erreur: {str(e)}')
     
     return render_template('signup.html')
 
@@ -266,92 +473,6 @@ def logout():
     session.clear()
     return redirect(url_for('pricing'))
 
-# ============================================
-# PASSWORD RESET ROUTES
-# ============================================
-
-@app.route('/forgot-password', methods=['GET', 'POST'])
-def forgot_password():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('SELECT id FROM users WHERE email = ?', (email,))
-        user = c.fetchone()
-        
-        if user:
-            user_id = user[0]
-            import secrets
-            token = secrets.token_urlsafe(32)
-            expires_at = datetime.now() + timedelta(hours=1)
-            
-            c.execute('DELETE FROM password_resets WHERE user_id = ?', (user_id,))
-            c.execute('''
-                INSERT INTO password_resets (user_id, token, expires_at)
-                VALUES (?, ?, ?)
-            ''', (user_id, token, expires_at.isoformat()))
-            conn.commit()
-            
-            reset_url = f"https://pmu-dutching.app/reset-password?token={token}"
-            subject = "Réinitialiser votre mot de passe PMU Dutching"
-            body = f"""
-            <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
-            <p><a href="{reset_url}">Réinitialiser mon mot de passe</a></p>
-            <p>Ce lien expire dans 1 heure.</p>
-            """
-            send_email(email, subject, body)
-        
-        conn.close()
-        return render_template('forgot_password.html', message='Si cet email existe, vous recevrez un lien de réinitialisation')
-    
-    return render_template('forgot_password.html')
-
-@app.route('/reset-password', methods=['GET', 'POST'])
-def reset_password():
-    token = request.args.get('token')
-    
-    if request.method == 'POST':
-        password = request.form.get('password')
-        password_confirm = request.form.get('password_confirm')
-        token = request.form.get('token')
-        
-        if password != password_confirm:
-            return render_template('reset_password.html', error='Les mots de passe ne correspondent pas', token=token)
-        
-        if len(password) < 6:
-            return render_template('reset_password.html', error='Le mot de passe doit faire au moins 6 caractères', token=token)
-        
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('''
-            SELECT user_id FROM password_resets 
-            WHERE token = ? AND expires_at > ?
-        ''', (token, datetime.now().isoformat()))
-        result = c.fetchone()
-        
-        if not result:
-            return render_template('reset_password.html', error='Token invalide ou expiré', token=token)
-        
-        user_id = result[0]
-        hashed_password = hashlib.sha256(password.encode()).hexdigest()
-        
-        c.execute('UPDATE users SET password = ? WHERE id = ?', (hashed_password, user_id))
-        c.execute('DELETE FROM password_resets WHERE token = ?', (token,))
-        conn.commit()
-        conn.close()
-        
-        return render_template('reset_password.html', success=True)
-    
-    if not token:
-        return redirect(url_for('forgot_password'))
-    
-    return render_template('reset_password.html', token=token)
-
-# ============================================
-# MAIN ROUTES
-# ============================================
-
 @app.route('/pricing')
 def pricing():
     if 'user_id' in session:
@@ -375,7 +496,7 @@ def dashboard():
     return render_template('dashboard.html')
 
 # ============================================
-# STRIPE PAYMENT ROUTES
+# STRIPE ROUTES
 # ============================================
 
 @app.route('/api/create-checkout-session', methods=['POST'])
@@ -385,8 +506,6 @@ def create_checkout_session():
         user_id = session['user_id']
         email = session['email']
         
-        print(f"[DEBUG] Creating checkout for user {user_id} ({email})")
-        
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
         c.execute('SELECT stripe_customer_id FROM subscriptions WHERE user_id = ?', (user_id,))
@@ -394,19 +513,15 @@ def create_checkout_session():
         
         if result and result[0]:
             customer_id = result[0]
-            print(f"[DEBUG] Using existing customer: {customer_id}")
         else:
-            print(f"[DEBUG] Creating new Stripe customer")
             customer = stripe.Customer.create(email=email)
             customer_id = customer.id
-            print(f"[DEBUG] New customer created: {customer_id}")
             c.execute('UPDATE subscriptions SET stripe_customer_id = ? WHERE user_id = ?', 
                      (customer_id, user_id))
             conn.commit()
         
         conn.close()
         
-        print(f"[DEBUG] Creating checkout session with mode=payment")
         checkout_session = stripe.checkout.Session.create(
             customer=customer_id,
             payment_method_types=['card'],
@@ -426,15 +541,11 @@ def create_checkout_session():
             cancel_url=f'{request.host_url}pricing'
         )
         
-        print(f"[DEBUG] Checkout session created: {checkout_session.id}")
         return jsonify({'id': checkout_session.id})
     
     except Exception as e:
-        error_msg = str(e)
-        print(f"\n[ERREUR STRIPE] {error_msg}\n")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': error_msg}), 400
+        print(f"[ERREUR STRIPE] {str(e)}")
+        return jsonify({'error': str(e)}), 400
 
 @app.route('/success')
 @login_required
@@ -462,25 +573,76 @@ def success():
         conn.commit()
         conn.close()
         
-        print(f"[SUCCESS] Payment received for user {user_id}. Access until {access_expires}")
-        
-        # Send confirmation email
-        email = session.get('email', '')
-        if email:
-            subject = "Bienvenue ! Votre abonnement est activé 🎉"
-            body = f"""
-            <p>Bienvenue dans PMU Dutching Tool Premium !</p>
-            <p>Votre abonnement est actif jusqu'au <strong>{access_expires.strftime('%d/%m/%Y')}</strong>.</p>
-            <p>Accédez au <a href="https://pmu-dutching.app/dashboard">tableau d'analyse</a>.</p>
-            <p>Bonne chance ! 🏇</p>
-            """
-            send_email(email, subject, body)
-        
+        print(f"[SUCCESS] Payment received for user {user_id}")
         return redirect(url_for('dashboard'))
     
     except Exception as e:
         print(f"[ERROR] Success page error: {str(e)}")
         return redirect(url_for('dashboard'))
+
+# ============================================
+# SCRAPER ROUTES (PREMIUM)
+# ============================================
+
+@app.route('/paristurf/<date_str>/<course_key>')
+@premium_required
+def paristurf_route(date_str, course_key):
+    """Paris-Turf pronos"""
+    try:
+        parts = course_key.split('C')
+        if len(parts) != 2:
+            return jsonify({'tips': [], 'records': {}}), 400
+        
+        num_r = int(parts[0].replace('R', ''))
+        num_c = int(parts[1])
+        
+        data = get_paristurf_data(date_str, num_r, num_c)
+        return jsonify(data)
+    
+    except Exception as e:
+        print(f"[ERROR] paristurf: {str(e)}")
+        return jsonify({'tips': [], 'records': {}}), 500
+
+@app.route('/records/<date_str>/<course_key>')
+@premium_required
+def records_route(date_str, course_key):
+    """Records km"""
+    try:
+        parts = course_key.split('C')
+        if len(parts) != 2:
+            return jsonify({}), 400
+        
+        num_r = int(parts[0].replace('R', ''))
+        num_c = int(parts[1])
+        
+        data = get_paristurf_data(date_str, num_r, num_c)
+        records = data.get('records', {})
+        result = {str(num): record for num, record in records.items()}
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        print(f"[ERROR] records: {str(e)}")
+        return jsonify({}), 500
+
+@app.route('/turfomania/<date_str>/<course_key>')
+@premium_required
+def turfomania_route(date_str, course_key):
+    """Turfomania pronos"""
+    try:
+        parts = course_key.split('C')
+        if len(parts) != 2:
+            return jsonify({'pronos': []}), 400
+        
+        num_r = int(parts[0].replace('R', ''))
+        num_c = int(parts[1])
+        
+        data = get_turfomania_pronos(date_str, num_r, num_c)
+        return jsonify(data)
+    
+    except Exception as e:
+        print(f"[ERROR] turfomania: {str(e)}")
+        return jsonify({'pronos': []}), 500
 
 # ============================================
 # API ROUTES - PROGRAMME & RAPPORTS (PREMIUM)
@@ -489,7 +651,7 @@ def success():
 @app.route('/api/programme/<date_str>')
 @premium_required
 def api_programme(date_str):
-    """Proxy dédié pour endpoint /programme"""
+    """Proxy pour endpoint /programme"""
     try:
         url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/programme/{date_str}"
         if request.query_string:
@@ -513,7 +675,7 @@ def api_programme(date_str):
 @app.route('/api/programme/<date_str>/R<int:numR>/C<int:numC>/rapports-definitifs')
 @premium_required
 def api_rapports_definitifs(date_str, numR, numC):
-    """Proxy dédié pour rapports définitifs PMU"""
+    """Proxy pour rapports définitifs PMU"""
     try:
         url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date_str}/R{numR}/C{numC}/rapports-definitifs"
         if request.query_string:
@@ -534,11 +696,10 @@ def api_rapports_definitifs(date_str, numR, numC):
         print(f"[API ERROR] Rapports: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Generic proxy (fallback)
 @app.route('/api/<path:path>')
 @premium_required
 def api_proxy(path):
-    """Proxy générique pour autres appels API"""
+    """Proxy générique"""
     try:
         url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/{path}"
         if request.query_string:
@@ -565,11 +726,7 @@ def api_proxy(path):
 
 @app.route('/api/health')
 def health():
-    return jsonify({
-        'status': 'ok',
-        'app': 'PMUDutchingTool',
-        'timestamp': datetime.now().isoformat()
-    })
+    return jsonify({'status': 'ok', 'app': 'PMUDutchingTool'})
 
 # ============================================
 # ERROR HANDLERS
