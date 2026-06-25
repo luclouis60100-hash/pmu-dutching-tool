@@ -178,7 +178,7 @@ Dutching Turf Team""",
 
 # Initialiser le scheduler
 scheduler = BackgroundScheduler()
-scheduler.add_job(func=send_expiration_reminders, trigger="cron", hour=15, minute=0)
+scheduler.add_job(func=send_expiration_reminders, trigger="cron", hour=13, minute=5)
 scheduler.start()
 
 # Arrêter le scheduler quand l'app s'arrête
