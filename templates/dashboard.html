@@ -716,8 +716,12 @@ function startCountdown() {
     if (el) el.textContent = countdown;
     if (countdown <= 0) {
       countdown = 20;
-      await loadReunions();
-      if (document.getElementById('page-pronos').style.display !== 'none') {
+      // Seulement rafraîchir les arrivées si on est sur Courses
+      if (document.getElementById('page-courses').style.display !== 'none' && selCourse) {
+        await loadArrivee(selCourse);
+      }
+      // Ou rafraîchir l'analyse si on est sur Pronos
+      if (document.getElementById('page-pronos').style.display !== 'none' && selReu) {
         await renderAnalysePronos();
       }
     }
@@ -725,9 +729,14 @@ function startCountdown() {
 }
 
 async function manualRefresh() {
+  // Refresh complet seulement si demandé manuellement
   await loadReunions();
   if (document.getElementById('page-pronos').style.display !== 'none') {
     await renderAnalysePronos();
+  }
+  if (selCourse && document.getElementById('page-courses').style.display !== 'none') {
+    await loadParticipants(selCourse);
+    await loadArrivee(selCourse);
   }
   countdown = 20;
 }
