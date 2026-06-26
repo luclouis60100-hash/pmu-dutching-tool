@@ -476,7 +476,7 @@ def login():
 @app.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('pricing'))
+    return redirect(url_for('index'))
 
 @app.route('/pricing')
 def pricing():
