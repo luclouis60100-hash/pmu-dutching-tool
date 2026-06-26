@@ -270,6 +270,7 @@ def dashboard():
 
 @app.route('/pricing')
 def pricing():
+    stripe_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
     if 'user_id' in session:
         user_id = session['user_id']
         conn = get_db()
@@ -285,9 +286,9 @@ def pricing():
             
             if datetime.now() < expires_at:
                 days_left = (expires_at - datetime.now()).days
-                return render_template('pricing.html', subscribed=True, days_left=days_left)
+                return render_template('pricing.html', subscribed=True, days_left=days_left, stripe_key=stripe_key)
     
-    return render_template('pricing.html', subscribed=False)
+    return render_template('pricing.html', subscribed=False, stripe_key=stripe_key)
 
 # ============================================
 # STRIPE ROUTES
