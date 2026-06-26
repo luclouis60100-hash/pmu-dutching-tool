@@ -320,7 +320,7 @@ function switchTab(tab) {
 
 async function loadReunions() {
   document.getElementById('rbar').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
-  document.getElementById('sb').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
+  if (!selReu) document.getElementById('sb').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   try {
     const r = await fetch(api(`/programme/${ds()}?specialisation=INTERNET`));
     const data = await r.json();
@@ -335,7 +335,19 @@ async function loadReunions() {
       }))
     }));
     renderReuBar();
-    if (reunions.length > 0) selectReu(reunions[0]);
+    if (reunions.length > 0) {
+      // Garder la réunion sélectionnée, ou prendre la première
+      if (selReu) {
+        const currentReu = reunions.find(r => r.numR === selReu.numR);
+        if (currentReu) {
+          selectReu(currentReu);
+        } else {
+          selectReu(reunions[0]);
+        }
+      } else {
+        selectReu(reunions[0]);
+      }
+    }
   } catch(e) {
     document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red)">❌ Erreur</div>`;
   }
