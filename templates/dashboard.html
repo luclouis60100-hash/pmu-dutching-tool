@@ -33,20 +33,30 @@
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 14px; }
-html, body { height: 100%; }
-#page-courses { display: flex; flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
 .topbar {
   background: var(--surface); border-bottom: 1px solid var(--border);
   padding: 0 1.5rem; height: 56px;
   display: flex; align-items: center; justify-content: space-between;
   position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow);
 }
-.logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; letter-spacing: -0.02em; }
+.logo { display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 600; }
 .logo-mark { background: var(--accent); color: white; width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+.tabs { display: flex; gap: 0; }
+.tab-btn {
+  padding: 0 18px; height: 56px; border: none; background: transparent;
+  font-family: var(--font); font-size: 14px; font-weight: 500;
+  cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent;
+  transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface2); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 .live-badge { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text2); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 5px 12px; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 .cd { font-family: var(--mono); font-weight: 500; color: var(--accent); }
+.page { display: none; }
+.page.active { display: flex; }
+#page-courses { flex-direction: column; height: calc(100vh - 56px); overflow: hidden; }
 .reunions-bar {
   background: var(--surface); border-bottom: 2px solid var(--border);
   padding: 0 1.5rem; display: flex; align-items: center; gap: 2px;
@@ -62,7 +72,6 @@ html, body { height: 100%; }
 .reu-btn:hover { background: var(--surface2); }
 .reu-btn.active { border-bottom-color: var(--accent); }
 .reu-num { font-size: 11px; font-weight: 700; font-family: var(--mono); color: var(--accent); }
-.reu-name { font-size: 12px; font-weight: 500; color: var(--text); }
 .layout { display: grid; grid-template-columns: 220px 1fr; height: calc(100vh - 103px); }
 .sidebar { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 6px 0; }
 .course-btn {
@@ -78,65 +87,22 @@ html, body { height: 100%; }
 .c-lib { font-size: 12px; font-weight: 500; color: var(--text); }
 .c-heure { font-size: 11px; color: var(--text3); font-family: var(--mono); }
 .main { overflow-y: auto; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
-.tab-btn {
-  padding: 0 18px; height: 56px; border: none; background: transparent;
-  font-family: var(--font); font-size: 14px; font-weight: 500;
-  cursor: pointer; color: var(--text2); border-bottom: 2px solid transparent;
-  transition: all 0.15s; display: flex; align-items: center; gap: 6px;
-}
-.tab-btn:hover { color: var(--text); background: var(--surface2); }
-.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 .c-header { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; box-shadow: var(--shadow); }
-.c-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; letter-spacing: -0.01em; }
-.tags { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag { font-size: 11px; padding: 3px 9px; border-radius: 20px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
-.tag.bl { background: var(--accent-light); border-color: #bfdbfe; color: var(--accent-text); font-family: var(--mono); font-weight: 500; }
+.c-title { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
 .tbl-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
 table { width: 100%; border-collapse: collapse; }
 thead { background: var(--surface2); border-bottom: 1px solid var(--border2); }
-th { padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); white-space: nowrap; }
+th { padding: 9px 12px; text-align: left; font-size: 10px; font-weight: 600; color: var(--text3); white-space: nowrap; }
 td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f9fafb; }
 tr.sel td { background: var(--selected-bg); }
-tr.sel td:first-child { border-left: 3px solid var(--accent); }
-.chk-col { width: 38px; text-align: center; }
-input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
 .npill {
   display: inline-flex; align-items: center; justify-content: center;
   min-width: 26px; height: 26px; border-radius: 6px;
   background: var(--surface2); border: 1px solid var(--border);
   font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--text2);
 }
-tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: var(--accent-text); }
-.hnom { font-weight: 600; font-size: 13px; }
-.hsub { font-size: 11px; color: var(--text3); margin-top: 1px; }
-.mus { font-family: var(--mono); font-size: 11px; color: var(--text3); max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cote-num { font-family: var(--mono); font-size: 14px; font-weight: 500; }
-.ldot { display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--green); margin-left: 3px; vertical-align: middle; animation: blink 2s infinite; }
-.mise-num { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); }
-.gain-num { font-family: var(--mono); font-size: 13px; font-weight: 500; }
-.top-controls { display: grid; grid-template-columns: auto 1fr 1fr 1fr 1fr; gap: 10px; }
-.budget-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 12px 16px; box-shadow: var(--shadow); display: flex; flex-direction: column; justify-content: center;
-}
-.ctrl-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 5px; }
-.budget-row { display: flex; align-items: baseline; gap: 4px; }
-.budget-row input {
-  font-size: 22px; font-family: var(--mono); font-weight: 500; color: var(--text);
-  background: transparent; border: none; outline: none; width: 80px; padding: 0;
-}
-.budget-row input::-webkit-inner-spin-button { display: none; }
-.eur { font-size: 15px; color: var(--text2); }
-.stat-card {
-  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
-  padding: 12px 16px; box-shadow: var(--shadow);
-}
-.stat-val { font-size: 20px; font-weight: 600; font-family: var(--mono); color: var(--text); }
-.stat-val.blue { color: var(--accent); }
-.stat-val.green { color: var(--green); }
-.stat-val.red { color: var(--red); }
 .arrivee-bar {
   background: var(--surface); border: 1px solid var(--border);
   border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow);
@@ -146,60 +112,21 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
   text-transform: uppercase; color: var(--text3); margin-bottom: 10px;
   display: flex; align-items: center; gap: 8px;
 }
-.arrivee-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: blink 2s infinite; }
-.arrivee-dot.red { background: var(--red); animation: none; }
+.arrivee-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 .positions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .pos-chip {
   display: flex; align-items: center; gap: 6px;
   background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 6px 10px;
-  font-size: 12px;
+  border-radius: 8px; padding: 6px 10px; font-size: 12px;
 }
 .pos-chip.p1 { background: #fef9c3; border-color: #fbbf24; }
 .pos-chip.p2 { background: #f3f4f6; border-color: #9ca3af; }
 .pos-chip.p3 { background: #fef3e8; border-color: #f97316; }
-.pos-num { font-family: var(--mono); font-size: 11px; font-weight: 600; color: var(--text3); min-width: 18px; }
-.pos-chip.p1 .pos-num { color: #b45309; }
-.pos-chip.p2 .pos-num { color: #6b7280; }
-.pos-chip.p3 .pos-num { color: #ea580c; }
-.pos-horse { font-weight: 600; font-size: 12px; color: var(--text); }
-.pos-cote { font-family: var(--mono); font-size: 11px; color: var(--text3); }
-.record-km {
-  font-family: var(--mono); font-size: 12px; font-weight: 500;
-  color: #0d7254; background: #e8f4f0;
-  padding: 2px 7px; border-radius: 5px; border: 1px solid #a7d9c8;
-  white-space: nowrap;
-}
-.record-na { font-size: 12px; color: var(--text3); }
-.equidia-bar {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 12px 16px; box-shadow: var(--shadow);
-}
-.equidia-title {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.07em;
-  text-transform: uppercase; color: var(--text3); margin-bottom: 10px;
-}
-.equidia-chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.eq-chip {
-  display: flex; align-items: center; gap: 6px;
-  background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer;
-  transition: all 0.12s;
-}
-.eq-chip:hover { border-color: var(--accent); background: var(--accent-light); }
-.eq-chip.base { background: #e8f4f0; border-color: #a7d9c8; }
-.eq-chip.base:hover { background: #d1ede5; }
-.eq-pos { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--text3); min-width: 16px; }
-.eq-chip.base .eq-pos { color: #0d7254; }
-.eq-num { font-family: var(--mono); font-size: 11px; color: var(--accent-text); background: var(--accent-light); padding: 1px 5px; border-radius: 4px; }
-.eq-nom { font-weight: 600; font-size: 12px; }
 .ldr { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 2.5rem; color: var(--text3); font-size: 13px; }
 .spin { width: 18px; height: 18px; border: 2px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4rem 2rem; color: var(--text3); gap: 10px; text-align: center; }
-.empty .ico { font-size: 44px; }
-.empty .tit { font-size: 15px; font-weight: 500; color: var(--text2); }
-#page-pronos { display: none; padding: 1.25rem; overflow-y: auto; height: calc(100vh - 56px); flex-direction: column; gap: 1rem; }
+#page-pronos { padding: 1.25rem; overflow-y: auto; height: calc(100vh - 56px); flex-direction: column; gap: 1rem; }
 .course-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); margin-bottom: 1rem; }
 .course-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 0.75rem; }
 .pronos-section { margin-bottom: 1rem; }
@@ -213,11 +140,9 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
 .prono-chip.base { background: #e8f4f0; border-color: #a7d9c8; color: #0d7254; }
 .prono-chip.good { background: var(--green-light); border-color: #6ee7b7; color: var(--green); }
 .prono-chip.bad { background: var(--red-light); border-color: #fca5a5; color: var(--red); }
-.prono-num { font-family: var(--mono); font-weight: 600; }
 .arrivee-section { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
 .arrivee-label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.arrivee-dot-small { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-.arrivee-dot-small.pending { background: var(--orange); animation: blink 2s infinite; }
+.arrivee-dot-small { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 .arrivee-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .arrivee-chip {
   display: flex; align-items: center; gap: 5px;
@@ -235,23 +160,25 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
 </head>
 <body>
 <div class="topbar">
-  <div style="display:flex;align-items:center;gap:0">
-    <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching PMU</div>
-    <button class="tab-btn active" id="tab-courses" onclick="switchTab('courses')">📋 Courses</button>
-    <button class="tab-btn" id="tab-pronos" onclick="switchTab('pronos')">📊 Analyse Pronos</button>
+  <div style="display:flex;align-items:center;gap:16px">
+    <div class="logo"><div class="logo-mark">🏇</div>Dutching PMU</div>
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('courses')">📋 Courses</button>
+      <button class="tab-btn" onclick="switchTab('pronos')">📊 Analyse Pronos</button>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <button id="btn-refresh" onclick="manualRefresh()" style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--text2);cursor:pointer;font-family:var(--font)" title="Rafraîchir">
-      <span id="refresh-icon">↻</span> Actualiser
+    <button id="btn-refresh" onclick="manualRefresh()" style="display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;cursor:pointer;font-family:var(--font)">
+      ↻ Actualiser
     </button>
-    <div class="live-badge">
+    <div class="live-badge" id="badge-courses" style="display:none">
       <div class="live-dot"></div>
       Actualisation dans <span class="cd" id="cd">20</span>s
     </div>
   </div>
 </div>
 
-<div id="page-courses">
+<div id="page-courses" class="page active">
 <div class="reunions-bar" id="rbar">
   <div class="ldr"><div class="spin"></div></div>
 </div>
@@ -260,43 +187,23 @@ tr.sel .npill { background: var(--accent-light); border-color: #bfdbfe; color: v
     <div class="ldr"><div class="spin"></div></div>
   </div>
   <div class="main">
-    <div class="top-controls">
-      <div class="budget-card">
-        <div class="ctrl-label">Budget</div>
-        <div class="budget-row">
-          <input type="number" id="budget" value="20" min="1" max="99999">
-          <span class="eur">€</span>
-        </div>
-      </div>
-      <div class="stat-card"><div class="ctrl-label">Chevaux cochés</div><div class="stat-val blue" id="s-nb">0</div></div>
-      <div class="stat-card"><div class="ctrl-label">Budget engagé</div><div class="stat-val" id="s-bud">—</div></div>
-      <div class="stat-card"><div class="ctrl-label">Gain théorique</div><div class="stat-val" id="s-gain">—</div></div>
-      <div class="stat-card"><div class="ctrl-label">Rentable ?</div><div class="stat-val" id="s-rent">—</div></div>
-    </div>
     <div id="panel">
-      <div class="empty">
-        <div class="ico">🏁</div>
-        <div class="tit">Sélectionnez une réunion</div>
-      </div>
+      <div class="empty"><div class="ico">🏁</div></div>
     </div>
   </div>
 </div>
 </div>
 
-<div id="page-pronos">
+<div id="page-pronos" class="page">
   <div id="pronos-content">
-    <div class="empty">
-      <div class="ico">📊</div>
-      <div class="tit">Sélectionnez une réunion</div>
-    </div>
+    <div class="empty"><div class="ico">📊</div></div>
   </div>
 </div>
 
 <script>
 let reunions = [], selReu = null, selCourse = null;
-let participants = [], checked = new Set(), arrivee = null;
 let refreshTimer = null, countdown = 20;
-let recordsKm = {}, pronoCacheMap = {};
+let arriveeCache = {}; // Cache global pour les arrivées
 const API = '';
 
 function ds() {
@@ -311,16 +218,22 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function switchTab(tab) {
-  document.getElementById('page-courses').style.display = tab === 'courses' ? 'flex' : 'none';
-  document.getElementById('tab-courses').className = 'tab-btn' + (tab === 'courses' ? ' active' : '');
-  document.getElementById('page-pronos').style.display = tab === 'pronos' ? 'flex' : 'none';
-  document.getElementById('tab-pronos').className = 'tab-btn' + (tab === 'pronos' ? ' active' : '');
-  if (tab === 'pronos') renderAnalysePronos();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  
+  if (tab === 'courses') {
+    document.getElementById('page-courses').classList.add('active');
+    document.getElementById('badge-courses').style.display = 'flex';
+  } else {
+    document.getElementById('page-pronos').classList.add('active');
+    document.getElementById('badge-courses').style.display = 'none';
+    renderAnalysePronos();
+  }
+  
+  event.target.classList.add('active');
 }
 
 async function loadReunions() {
-  document.getElementById('rbar').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
-  if (!selReu) document.getElementById('sb').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
   try {
     const r = await fetch(api(`/programme/${ds()}?specialisation=INTERNET`));
     const data = await r.json();
@@ -335,21 +248,11 @@ async function loadReunions() {
       }))
     }));
     renderReuBar();
-    if (reunions.length > 0) {
-      // Garder la réunion sélectionnée, ou prendre la première
-      if (selReu) {
-        const currentReu = reunions.find(r => r.numR === selReu.numR);
-        if (currentReu) {
-          selectReu(currentReu);
-        } else {
-          selectReu(reunions[0]);
-        }
-      } else {
-        selectReu(reunions[0]);
-      }
+    if (reunions.length > 0 && !selReu) {
+      selectReu(reunions[0]);
     }
   } catch(e) {
-    document.getElementById('rbar').innerHTML = `<div style="padding:1rem;color:var(--red)">❌ Erreur</div>`;
+    console.error(e);
   }
 }
 
@@ -361,17 +264,16 @@ function formatHeure(ts) {
 
 function renderReuBar() {
   const bar = document.getElementById('rbar');
-  if (!reunions.length) return;
   bar.innerHTML = reunions.map(r => `
     <button class="reu-btn ${selReu?.numR === r.numR ? 'active' : ''}" onclick="selectReu(${r.numR})">
       <span class="reu-num">R${r.numR}</span>
-      <span class="reu-name">${r.hippo}</span>
+      <span style="font-size:12px;font-weight:500;color:var(--text)">${r.hippo}</span>
     </button>
   `).join('');
 }
 
-function selectReu(numROrObj) {
-  const reu = typeof numROrObj === 'number' ? reunions.find(r => r.numR === numROrObj) : numROrObj;
+function selectReu(numR) {
+  const reu = reunions.find(r => r.numR === numR);
   if (!reu) return;
   selReu = reu;
   renderReuBar();
@@ -382,9 +284,9 @@ function selectReu(numROrObj) {
 function renderSidebar() {
   if (!selReu) return;
   const sb = document.getElementById('sb');
-  sb.innerHTML = selReu.courses.map((c, i) => `
-    <button class="course-btn ${selCourse?.numC === c.numC && selCourse?.numR === c.numR ? 'active' : ''}"
-      onclick="selectCourse(Object.assign({},${JSON.stringify(c)}))">
+  sb.innerHTML = selReu.courses.map(c => `
+    <button class="course-btn ${selCourse?.numC === c.numC ? 'active' : ''}"
+      onclick="selectCourse(${JSON.stringify(c).replaceAll('"', '&quot;')})">
       <span class="c-num">C${c.numC}</span>
       <span class="c-info">
         <span class="c-lib">${c.libelle}</span>
@@ -396,233 +298,64 @@ function renderSidebar() {
 
 async function selectCourse(c) {
   selCourse = c;
-  checked = new Set();
-  arrivee = null;
-  renderSidebar();
   document.getElementById('panel').innerHTML = '<div class="ldr"><div class="spin"></div></div>';
-  updateStats();
-  await loadParticipants(c);
-  await Promise.all([loadParisTurf(c.numR, c.numC), loadArrivee(c), loadRecordsKm(c)]);
-}
-
-async function loadParticipants(c) {
-  try {
-    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/participants?specialisation=INTERNET'));
-    const data = await r.json();
-    participants = (data.participants || []).filter(p => !p.nonPartant);
-    renderPanel(c);
-  } catch(e) {
-    document.getElementById('panel').innerHTML = '<div class="empty"><div class="ico">⚠️</div><div class="tit">Erreur</div></div>';
-  }
-}
-
-async function loadParisTurf(numR, numC) {
-  const key = `R${numR}C${numC}`;
-  if (pronoCacheMap[key] !== undefined) return;
-  pronoCacheMap[key] = null;
-  try {
-    const r = await fetch(`/paristurf/${ds()}/${key}`);
-    const txt = await r.text();
-    if (txt && !txt.startsWith('<')) {
-      pronoCacheMap[key] = JSON.parse(txt);
-    }
-  } catch(e) {}
-  renderRows();
+  renderSidebar();
+  await loadArrivee(c);
 }
 
 async function loadArrivee(c) {
   try {
-    const r = await fetch(api('/programme/' + ds() + '/R' + c.numR + '/C' + c.numC + '/participants?specialisation=INTERNET'));
+    const r = await fetch(api(`/programme/${ds()}/R${c.numR}/C${c.numC}/participants?specialisation=INTERNET`));
     const data = await r.json();
     const parts = data.participants || [];
-    const arrived = parts.filter(p => p.ordreArrivee).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
-    arrivee = arrived.length > 0 ? arrived : null;
-    renderArrivee();
-  } catch(e) {}
-}
-
-async function loadRecordsKm(c) {
-  if (!selCourse) return;
-  const key = `R${c.numR}C${c.numC}`;
-  if (recordsKm._key === key) return;
-  try {
-    const names = participants.map((p,i) => `${p.numPmu}=${encodeURIComponent(p.nom)}`).join('&');
-    const r = await fetch(`/records/${ds()}/${key}?${names}`);
-    const txt = await r.text();
-    if (txt && !txt.startsWith('<')) {
-      recordsKm = JSON.parse(txt);
-      recordsKm._key = key;
-      renderRows();
-    }
-  } catch(e) {}
-}
-
-function renderPanel(c) {
-  const panel = document.getElementById('panel');
-  panel.innerHTML = `
-    <div class="c-header">
-      <div class="c-title">R${c.numR}C${c.numC} — ${c.libelle}</div>
-      <div class="tags">
-        ${c.heure ? '<span class="tag bl">'+c.heure+'</span>' : ''}
-      </div>
-    </div>
-    <div id="paris-turf-bar"></div>
-    <div id="arrivee-bar" class="arrivee-bar"></div>
-    <div class="tbl-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th class="chk-col"><input type="checkbox" id="chk-all" onchange="toggleAll(this.checked)"></th>
-            <th>N°</th>
-            <th>Cheval</th>
-            <th>Musique</th>
-            <th>Cote live</th>
-            <th>Record km</th>
-            <th>Mise (€)</th>
-            <th>Gain net</th>
-          </tr>
-        </thead>
-        <tbody id="tbl-body"></tbody>
-      </table>
-    </div>
-  `;
-  renderRows();
-  loadPronos(c);
-  renderArrivee();
-}
-
-function cote(p) {
-  const c = p.dernierRapportDirect || {};
-  const r = p.dernierRapportReference || {};
-  return parseFloat(c.rapport || r.rapport) || 999;
-}
-
-function renderRecord(p) {
-  const rec = recordsKm[p.numPmu];
-  if (!rec) return '<span class="record-na">—</span>';
-  return `<span class="record-km">${rec}</span>`;
-}
-
-function renderRows() {
-  const body = document.getElementById('tbl-body');
-  if (!body || !participants.length) return;
-  
-  const budget = parseFloat(document.getElementById('budget')?.value || 20);
-  const nbChecked = checked.size;
-  const sumInv = nbChecked > 0 ? [...checked].reduce((s, num) => {
-    const p = participants.find(x => x.numPmu === num);
-    return s + (p ? 1 / (cote(p) || 1) : 0);
-  }, 0) : 0;
-  
-  body.innerHTML = participants.map(p => {
-    const num = p.numPmu;
-    const isChecked = checked.has(num);
-    const c_val = cote(p);
-    const coteStr = c_val < 900 ? c_val.toFixed(1) : '—';
-    const mise = (isChecked && nbChecked > 0 && sumInv > 0) ? Math.round(budget / (c_val * sumInv)) : 0;
-    const miseReel = (isChecked && nbChecked > 0 && sumInv > 0) ? budget / (c_val * sumInv) : 0;
-    const gainNet = isChecked && miseReel > 0 ? ((miseReel * c_val) - budget).toFixed(2) : '—';
-    const miseAff = isChecked && miseReel > 0 ? (mise > 0 ? mise + '€' : '<1€') : '—';
+    const arrivee = parts.filter(p => p.ordreArrivee).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
     
-    return `<tr class="${isChecked ? 'sel' : ''}" onclick="toggleCheck(${num})">
-      <td class="chk-col" onclick="event.stopPropagation()">
-        <input type="checkbox" ${isChecked?'checked':''} onchange="toggleCheck(${num})">
-      </td>
-      <td><span class="npill">${num}</span></td>
-      <td><div class="hnom">${p.nom}</div></td>
-      <td><div class="mus">${p.musique||'—'}</div></td>
-      <td><span class="cote-num">${coteStr}</span></td>
-      <td>${renderRecord(p)}</td>
-      <td><span class="mise-num">${miseAff}</span></td>
-      <td><span class="gain-num" style="color:${gainNet!=='—'?(parseFloat(gainNet)>=0?'var(--green)':'var(--red)'):'var(--text3)'}">${gainNet !== '—' ? (parseFloat(gainNet)>=0?'+':'')+gainNet+'€' : '—'}</span></td>
-    </tr>`;
-  }).join('');
-  
-  updateStats();
-}
-
-function toggleCheck(num) {
-  if (checked.has(num)) checked.delete(num);
-  else checked.add(num);
-  renderRows();
-}
-
-function toggleAll(v) {
-  if (v) participants.forEach(p => checked.add(p.numPmu));
-  else checked.clear();
-  renderRows();
-}
-
-function updateStats() {
-  const nb = checked.size;
-  document.getElementById('s-nb').textContent = nb;
-  if (nb === 0) {
-    document.getElementById('s-bud').textContent = '—';
-    document.getElementById('s-gain').textContent = '—';
-    document.getElementById('s-rent').textContent = '—';
-    return;
-  }
-  
-  const budget = parseFloat(document.getElementById('budget')?.value || 20);
-  const checked_parts = [...checked].map(num => participants.find(p => p.numPmu === num)).filter(Boolean);
-  const sumInv = checked_parts.reduce((s, p) => s + 1/(cote(p)||1), 0);
-  let totalMise = 0;
-  checked_parts.forEach(p => { totalMise += Math.round(budget / (cote(p) * sumInv)); });
-  const gainTheoriqueNet = budget - totalMise;
-  
-  document.getElementById('s-bud').textContent = totalMise + '€';
-  document.getElementById('s-gain').textContent = (gainTheoriqueNet >= 0 ? '+' : '') + gainTheoriqueNet.toFixed(2) + '€';
-  
-  const rentable = gainTheoriqueNet >= 0;
-  const rentEl = document.getElementById('s-rent');
-  rentEl.textContent = rentable ? '✓ Oui' : '✗ Non';
-  rentEl.className = 'stat-val ' + (rentable ? 'green' : 'red');
-}
-
-function renderArrivee() {
-  const bar = document.getElementById('arrivee-bar');
-  if (!bar) return;
-  
-  if (!arrivee || !arrivee.length) {
-    bar.innerHTML = '<div class="arrivee-title"><span class="arrivee-dot"></span>Arrivée</div><div style="font-size:12px;color:var(--text3);display:flex;align-items:center;gap:6px"><div class="spin" style="width:12px;height:12px;border-width:2px"></div>En attente...</div>';
-    return;
-  }
-  
-  const top = arrivee.slice(0, 5);
-  const chips = top.map(p => {
-    const ordre = p.ordreArrivee;
-    const cls = ordre === 1 ? 'p1' : ordre === 2 ? 'p2' : ordre === 3 ? 'p3' : '';
-    const medal = ordre === 1 ? '🥇' : ordre === 2 ? '🥈' : ordre === 3 ? '🥉' : ordre + 'e';
-    return '<div class="pos-chip ' + cls + '"><span class="pos-num">' + medal + '</span><span class="pos-horse">N°' + p.numPmu + ' ' + p.nom + '</span></div>';
-  }).join('');
-  
-  bar.innerHTML = '<div class="arrivee-title"><span class="arrivee-dot red"></span>Arrivée officielle</div><div class="positions">' + chips + '</div>';
-}
-
-async function loadPronos(c) {
-  const key = `R${c.numR}C${c.numC}`;
-  try {
-    const r = await fetch('/paristurf/' + ds() + '/' + key);
-    const txt = await r.text();
-    if (!txt || txt.startsWith('<')) return;
-    const data = JSON.parse(txt);
-    pronoCacheMap[key] = data;
-    if (data && data.tips && data.tips.length) {
-      const chips = data.tips.slice(0,5).map((t, i) => '<div class="eq-chip ' + (i===0?'base':'') + '" onclick="toggleCheck(' + t.num + ')"><span class="eq-pos">#' + t.rang + '</span><span class="eq-num">' + t.num + '</span><span>' + (t.nom||'') + '</span></div>').join('');
-      const ptBar = document.getElementById('paris-turf-bar');
-      if (ptBar) {
-        ptBar.innerHTML = '<div class="equidia-bar" style="margin-bottom:8px"><div class="equidia-title">📰 Pronos</div><div class="equidia-chips">' + chips + '</div></div>';
-      }
-      renderRows();
+    const key = `R${c.numR}C${c.numC}`;
+    arriveeCache[key] = arrivee;
+    
+    // Mettre à jour aussi dans Analyse Pronos si elle est affichée
+    if (document.getElementById('page-pronos').classList.contains('active')) {
+      updatePronosArrivee(key, arrivee);
     }
-  } catch(e) {}
+    
+    renderPanel(c, arrivee);
+  } catch(e) {
+    console.error(e);
+  }
+}
+
+function renderPanel(c, arrivee) {
+  const panel = document.getElementById('panel');
+  
+  let html = `<div class="c-header">
+    <div class="c-title">R${c.numR}C${c.numC} — ${c.libelle}</div>
+  </div>`;
+  
+  if (arrivee && arrivee.length > 0) {
+    html += `<div class="arrivee-bar">
+      <div class="arrivee-title"><span class="arrivee-dot"></span>Arrivée officielle</div>
+      <div class="positions">`;
+    
+    arrivee.slice(0, 5).forEach(p => {
+      const ordre = p.ordreArrivee;
+      const cls = ordre === 1 ? 'p1' : ordre === 2 ? 'p2' : ordre === 3 ? 'p3' : '';
+      const medal = ordre === 1 ? '🥇' : ordre === 2 ? '🥈' : ordre === 3 ? '🥉' : ordre + 'e';
+      html += `<div class="pos-chip ${cls}"><span>${medal} N°${p.numPmu} ${p.nom}</span></div>`;
+    });
+    
+    html += `</div></div>`;
+  } else {
+    html += `<div class="arrivee-bar"><div class="arrivee-title">En attente...</div></div>`;
+  }
+  
+  panel.innerHTML = html;
 }
 
 async function renderAnalysePronos() {
   const container = document.getElementById('pronos-content');
   
   if (!selReu) {
-    container.innerHTML = '<div class="empty"><div class="ico">📊</div><div class="tit">Sélectionnez une réunion</div></div>';
+    container.innerHTML = '<div class="empty"><div class="ico">📊</div></div>';
     return;
   }
   
@@ -634,17 +367,14 @@ async function renderAnalysePronos() {
     for (const course of selReu.courses) {
       const numR = course.numR;
       const numC = course.numC;
+      const key = `R${numR}C${numC}`;
       
-      const [pronosData, arriveeData] = await Promise.all([
-        fetch(`/paristurf/${ds()}/R${numR}C${numC}`).then(r => r.json()).catch(() => ({ tips: [] })),
-        fetch(api(`/programme/${ds()}/R${numR}/C${numC}/participants?specialisation=INTERNET`)).then(r => r.json()).catch(() => ({ participants: [] }))
-      ]);
-      
+      const pronosData = await fetch(`/paristurf/${ds()}/${key}`).then(r => r.json()).catch(() => ({ tips: [] }));
       const pronos = pronosData.tips || [];
-      const participants = arriveeData.participants || [];
-      const arrivee = participants.filter(p => p.ordreArrivee).sort((a,b) => a.ordreArrivee - b.ordreArrivee);
       
-      let courseHtml = `<div class="course-card">
+      let arrivee = arriveeCache[key] || [];
+      
+      let courseHtml = `<div class="course-card" data-key="${key}">
         <div class="course-card-title">R${numR}C${numC} — ${course.libelle}</div>`;
       
       if (pronos.length > 0) {
@@ -657,54 +387,66 @@ async function renderAnalysePronos() {
           if (arrivee.length > 0) {
             const isInArrivee = arrivee.some(a => a.numPmu === p.num);
             const position = arrivee.findIndex(a => a.numPmu === p.num) + 1;
-            if (isInArrivee && position <= 3) {
-              scoreClass = 'good';
-            } else if (isInArrivee) {
-              scoreClass = 'bad';
-            }
+            scoreClass = isInArrivee && position <= 3 ? 'good' : isInArrivee ? 'bad' : '';
           }
-          
           const medal = i === 0 ? '🏆' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
-          courseHtml += `<span class="prono-chip ${scoreClass || 'base'}">
-            ${medal} <span class="prono-num">${p.num}</span>
-          </span>`;
+          courseHtml += `<span class="prono-chip ${scoreClass || 'base'}">${medal} ${p.num}</span>`;
         });
         
         courseHtml += `</div></div>`;
       }
       
+      courseHtml += `<div class="arrivee-section" data-key="${key}">`;
       if (arrivee.length > 0) {
-        courseHtml += `<div class="arrivee-section">
-          <div class="arrivee-label"><span class="arrivee-dot-small"></span>Arrivée</div>
+        courseHtml += `<div class="arrivee-label"><span class="arrivee-dot-small"></span>Arrivée</div>
           <div class="arrivee-chips">`;
-        
         arrivee.slice(0, 5).forEach((a, i) => {
           const medals = ['🥇', '🥈', '🥉', '4e', '5e'];
           const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
           const isInPronos = pronos.some(p => p.num === a.numPmu);
-          const score = isInPronos ? `<span class="score-badge">✓</span>` : '<span class="score-badge" style="background:var(--red-light);border-color:var(--red);color:var(--red)">✗</span>';
-          
-          courseHtml += `<div class="arrivee-chip ${cls}">
-            <span class="medal">${medals[i]}</span> N°${a.numPmu} ${score}
-          </div>`;
+          const badge = isInPronos ? '<span class="score-badge">✓</span>' : '<span class="score-badge" style="background:var(--red-light);color:var(--red)">✗</span>';
+          courseHtml += `<div class="arrivee-chip ${cls}"><span class="medal">${medals[i]}</span> N°${a.numPmu} ${badge}</div>`;
         });
-        
-        courseHtml += `</div></div>`;
+        courseHtml += `</div>`;
       } else {
-        courseHtml += `<div class="arrivee-section">
-          <div class="arrivee-label"><span class="arrivee-dot-small pending"></span>En attente</div>
-        </div>`;
+        courseHtml += `<div class="arrivee-label"><span class="arrivee-dot-small"></span>En attente</div>`;
       }
+      courseHtml += `</div></div>`;
       
-      courseHtml += `</div>`;
       html += courseHtml;
     }
     
-    container.innerHTML = html || '<div class="empty"><div class="ico">📊</div></div>';
+    container.innerHTML = html;
   } catch(e) {
-    console.error(e);
     container.innerHTML = '<div class="empty"><div class="ico">⚠️</div></div>';
   }
+}
+
+function updatePronosArrivee(key, arrivee) {
+  const card = document.querySelector(`[data-key="${key}"]`);
+  if (!card) return;
+  
+  const section = card.querySelector('.arrivee-section');
+  if (!section) return;
+  
+  let html = `<div class="arrivee-label"><span class="arrivee-dot-small"></span>Arrivée</div>`;
+  
+  if (arrivee.length > 0) {
+    html += `<div class="arrivee-chips">`;
+    const pronos = card.querySelectorAll('.prono-chip');
+    const pronoNums = Array.from(pronos).map(p => parseInt(p.textContent.match(/\d+/)[0]));
+    
+    arrivee.slice(0, 5).forEach((a, i) => {
+      const medals = ['🥇', '🥈', '🥉', '4e', '5e'];
+      const cls = i === 0 ? 'p1' : i === 1 ? 'p2' : i === 2 ? 'p3' : '';
+      const isInPronos = pronoNums.includes(a.numPmu);
+      const badge = isInPronos ? '<span class="score-badge">✓</span>' : '<span class="score-badge" style="background:var(--red-light);color:var(--red)">✗</span>';
+      html += `<div class="arrivee-chip ${cls}"><span class="medal">${medals[i]}</span> N°${a.numPmu} ${badge}</div>`;
+    });
+    html += `</div>`;
+  }
+  
+  section.innerHTML = html;
 }
 
 function startCountdown() {
@@ -716,26 +458,16 @@ function startCountdown() {
     if (el) el.textContent = countdown;
     if (countdown <= 0) {
       countdown = 20;
-      // Seulement rafraîchir les arrivées si on est sur Courses
-      if (document.getElementById('page-courses').style.display !== 'none' && selCourse) {
+      if (document.getElementById('page-courses').classList.contains('active') && selCourse) {
         await loadArrivee(selCourse);
-      }
-      // Ou rafraîchir l'analyse si on est sur Pronos
-      if (document.getElementById('page-pronos').style.display !== 'none' && selReu) {
-        await renderAnalysePronos();
       }
     }
   }, 1000);
 }
 
 async function manualRefresh() {
-  // Refresh complet seulement si demandé manuellement
   await loadReunions();
-  if (document.getElementById('page-pronos').style.display !== 'none') {
-    await renderAnalysePronos();
-  }
-  if (selCourse && document.getElementById('page-courses').style.display !== 'none') {
-    await loadParticipants(selCourse);
+  if (selCourse && document.getElementById('page-courses').classList.contains('active')) {
     await loadArrivee(selCourse);
   }
   countdown = 20;
