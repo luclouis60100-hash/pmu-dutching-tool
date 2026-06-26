@@ -526,7 +526,6 @@ th.sortable.active { color: var(--accent); }
   <div style="display:flex;align-items:center;gap:0">
     <div class="logo" style="margin-right:16px"><div class="logo-mark">🏇</div>Dutching PMU</div>
     <button class="tab-btn active" id="tab-courses" onclick="switchTab('courses')">📋 Courses</button>
-    <button class="tab-btn" id="tab-musique" onclick="switchTab('musique')">🎵 Analyse Musique</button>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;color:var(--text2)">
@@ -600,16 +599,6 @@ th.sortable.active { color: var(--accent); }
 </div>
 
 </div><!-- /page-courses -->
-
-<div id="page-musique" style="display:none;padding:1.25rem;display:none;flex-direction:column;gap:1rem;overflow-y:auto;height:calc(100vh - 56px)">
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem 1.25rem;box-shadow:var(--shadow)">
-    <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">🎵 Analyse de la Musique</div>
-    <div style="font-size:12px;color:var(--text3)">Score : 1er=3pts · 2e=2pts · 3e=1pt · Minimum 4 courses · Basé sur la course sélectionnée</div>
-  </div>
-  <div id="musique-content">
-    <div class="empty"><div class="ico">🎵</div><div class="tit">Sélectionnez une course</div><div class="sub">L'analyse apparaîtra ici</div></div>
-  </div>
-</div>
 
 <script>
 // ══════════════════════════════════════════
