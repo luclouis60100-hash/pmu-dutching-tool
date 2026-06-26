@@ -384,7 +384,7 @@ function renderSidebar() {
   const sb = document.getElementById('sb');
   sb.innerHTML = selReu.courses.map((c, i) => `
     <button class="course-btn ${selCourse?.numC === c.numC && selCourse?.numR === c.numR ? 'active' : ''}"
-      onclick="selectCourse(Object.assign({},${JSON.stringify(c)}))">
+      onclick="selectCourseByIndex(${i})">
       <span class="c-num">C${c.numC}</span>
       <span class="c-info">
         <span class="c-lib">${c.libelle}</span>
@@ -392,6 +392,11 @@ function renderSidebar() {
       </span>
     </button>
   `).join('');
+}
+
+function selectCourseByIndex(idx) {
+  if (!selReu || !selReu.courses[idx]) return;
+  selectCourse(selReu.courses[idx]);
 }
 
 async function selectCourse(c) {
