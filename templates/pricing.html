@@ -292,7 +292,7 @@
                     return;
                 }
                 
-                const result = await stripe.redirectToCheckout({ sessionId: data.id });
+                const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
                 if (result.error) {
                     alert('Erreur: ' + result.error.message);
                 }
