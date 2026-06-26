@@ -113,7 +113,12 @@ def get_paristurf_data(date_str, num_r, num_c):
         sess = requests.Session()
         sess.headers.update(PARISTURF_HEADERS)
         
-        date_fmt_pt = f"{date_str[0:4]}-{date_str[4:6]}-{date_str[6:8]}"
+        # date_str arrive en DDMMYYYY, le convertir en YYYY-MM-DD
+        if len(date_str) == 8:
+            date_fmt_pt = f"{date_str[4:8]}-{date_str[2:4]}-{date_str[0:2]}"
+        else:
+            date_fmt_pt = date_str
+        
         today_str = datetime.now().strftime("%Y-%m-%d")
         
         if date_fmt_pt == today_str:
