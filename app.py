@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import re
+from apscheduler.schedulers.background import BackgroundScheduler
 
 load_dotenv()
 
@@ -162,6 +163,22 @@ def signup():
             
             session['user_id'] = user_id
             session['email'] = email
+            
+            # Send confirmation email
+            html = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #1e3c72;">✅ Bienvenue sur Dutching Turf !</h2>
+                        <p>Votre compte a été créé avec succès.</p>
+                        <p>Pour accéder à votre tableau d'analyse PMU, vous devez activer un abonnement premium (9,99€/mois).</p>
+                        <a href="https://web-production-b3d28.up.railway.app/pricing" style="background: #2a9d5c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">S'abonner maintenant</a>
+                        <p style="margin-top: 30px; color: #999; font-size: 12px;">© 2026 Dutching Turf</p>
+                    </div>
+                </body>
+            </html>
+            """
+            send_email(email, "✅ Bienvenue sur Dutching Turf", html)
             
             return redirect(url_for('pricing'))
         except psycopg2.IntegrityError:
@@ -352,6 +369,7 @@ def checkout_success():
         
         if session_data.payment_status == 'paid':
             user_id = session.get('user_id')
+            email = session.get('email')
             if user_id:
                 access_expires = datetime.now() + timedelta(days=30)
                 
@@ -361,6 +379,22 @@ def checkout_success():
                          (access_expires, user_id))
                 conn.commit()
                 conn.close()
+                
+                # Send confirmation email
+                html = f"""
+                <html>
+                    <body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;">
+                        <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #2a9d5c;">✅ Paiement confirmé !</h2>
+                            <p>Votre abonnement Dutching Turf est maintenant actif.</p>
+                            <p><strong>Accès valide jusqu'au :</strong> {access_expires.strftime('%d/%m/%Y')}</p>
+                            <a href="https://web-production-b3d28.up.railway.app/dashboard" style="background: #1e3c72; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">Accéder au tableau</a>
+                            <p style="margin-top: 30px; color: #999; font-size: 12px;">© 2026 Dutching Turf</p>
+                        </div>
+                    </body>
+                </html>
+                """
+                send_email(email, "✅ Votre abonnement est activé !", html)
                 
                 return render_template('checkout_success.html')
         
@@ -482,3 +516,97 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
+
+# ============================================
+# EMAIL FUNCTIONS
+# ============================================
+
+def send_email(to_email, subject, html_content):
+    """Send email via SendGrid API"""
+    if not SENDGRID_API_KEY:
+        print(f"⚠️ SendGrid key not configured")
+        return False
+    
+    try:
+        import requests as req
+        url = "https://api.sendgrid.com/v3/mail/send"
+        headers = {
+            "Authorization": f"Bearer {SENDGRID_API_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        data = {
+            "personalizations": [{
+                "to": [{"email": to_email}]
+            }],
+            "from": {"email": "luclouis60100@gmail.com", "name": "Dutching Turf"},
+            "subject": subject,
+            "content": [{
+                "type": "text/html",
+                "value": html_content
+            }]
+        }
+        
+        response = req.post(url, json=data, headers=headers)
+        return response.status_code == 202
+    except Exception as e:
+        print(f"❌ SendGrid error: {e}")
+        return False
+
+# Update signup route to send confirmation email
+def updated_signup_with_email():
+    """Updated signup that sends confirmation email"""
+    pass
+
+# ============================================
+# BACKGROUND TASK - Email rappel 7j avant expiration
+# ============================================
+
+from apscheduler.schedulers.background import BackgroundScheduler
+
+def check_subscriptions_expiring_soon():
+    """Envoyer rappel 7 jours avant expiration"""
+    try:
+        conn = get_db()
+        c = conn.cursor()
+        
+        # Chercher les abonnements qui expirent dans 7 jours
+        seven_days_later = (datetime.now() + timedelta(days=7)).isoformat()
+        
+        c.execute('''
+            SELECT u.email, s.access_expires_at 
+            FROM subscriptions s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.access_expires_at IS NOT NULL
+            AND DATE(s.access_expires_at) = DATE(NOW() + INTERVAL '7 days')
+        ''')
+        
+        results = c.fetchall()
+        conn.close()
+        
+        for email, expires_at in results:
+            html = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif; background: #f5f5f5; padding: 20px;">
+                    <div style="background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #1e3c72;">⏰ Renouvellement de votre abonnement</h2>
+                        <p>Votre abonnement Dutching Turf expire dans <strong>7 jours</strong>.</p>
+                        <p>Pour continuer à accéder à votre tableau d'analyse, veuillez renouveler votre abonnement.</p>
+                        <a href="https://web-production-b3d28.up.railway.app/pricing" style="background: #2a9d5c; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">Renouveler maintenant</a>
+                        <p style="margin-top: 30px; color: #999; font-size: 12px;">© 2026 Dutching Turf</p>
+                    </div>
+                </body>
+            </html>
+            """
+            send_email(email, "⏰ Votre abonnement expire dans 7 jours", html)
+            print(f"✅ Email rappel envoyé à {email}")
+        
+    except Exception as e:
+        print(f"❌ Erreur tâche scheduling: {e}")
+
+# Initialiser scheduler
+scheduler = BackgroundScheduler()
+scheduler.add_job(check_subscriptions_expiring_soon, 'cron', hour=9, minute=0)
+scheduler.start()
+
+print("✅ Email scheduler démarré (check quotidien à 9h UTC)")
