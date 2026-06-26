@@ -285,6 +285,33 @@ def reset_password(token):
 def dashboard():
     return render_template('dashboard.html')
 
+@app.route('/contact', methods=['GET', 'POST'])
+def contact():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        message = request.form.get('message')
+        
+        if name and email and message:
+            # Send email to admin
+            html = f"""
+            <html>
+                <body style="font-family: Arial, sans-serif;">
+                    <h2>Nouveau message de contact</h2>
+                    <p><strong>Nom :</strong> {name}</p>
+                    <p><strong>Email :</strong> {email}</p>
+                    <p><strong>Message :</strong></p>
+                    <p>{message.replace(chr(10), '<br>')}</p>
+                </body>
+            </html>
+            """
+            send_email('luclouis60100@gmail.com', f'📧 Nouveau message: {name}', html)
+            return render_template('contact.html', success=True)
+        
+        return render_template('contact.html', error='Tous les champs sont requis')
+    
+    return render_template('contact.html')
+
 @app.route('/pricing')
 def pricing():
     stripe_key = os.environ.get('STRIPE_PUBLISHABLE_KEY')
