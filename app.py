@@ -396,7 +396,7 @@ def checkout_success():
                 """
                 send_email(email, "✅ Votre abonnement est activé !", html)
                 
-                return render_template('checkout_success.html')
+                return redirect(url_for('dashboard'))
         
         return redirect(url_for('pricing'))
     except Exception as e:
