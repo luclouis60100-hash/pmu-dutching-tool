@@ -1087,6 +1087,7 @@ function renderPanel(c) {
             <th class="sortable" id="th-record" onclick="setSort('record')">Record km <span class="sort-icon"></span></th>
             <th>Mise (€)</th>
             <th>Gain net</th>
+            <th></th>
           </tr>
         </thead>
         <tbody id="tbl-body"></tbody>
@@ -1248,6 +1249,7 @@ function renderRows() {
       <td style="font-family:var(--mono);font-size:11px">${renderRecord(p)}</td>
       <td><span class="mise-num">${miseAff}</span></td>
       <td><span class="gain-num" style="color:${gainNet!=='—'?(parseFloat(gainNet)>=0?'var(--green)':'var(--red)'):'var(--text3)'}">${gainNet !== '—' ? (parseFloat(gainNet)>=0?'+':'')+gainNet+'€' : '—'}</span></td>
+      <td style="text-align:center"><button onclick="regarderDirect(${selCourse.numR}, ${selCourse.numC})" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:18px;padding:4px" title="Regarder en direct sur PMU">📺</button></td>
     </tr>`;
   }).join('');
 
@@ -1274,6 +1276,12 @@ function toggleAll(v) {
 function updateTicketBtn() {
   const btn = document.getElementById('btn-ticket');
   if (btn) btn.style.display = checked.size > 0 ? 'flex' : 'none';
+}
+
+function regarderDirect(numR, numC) {
+  const date = document.getElementById('date-picker')?.value || new Date().toISOString().slice(0,10);
+  const url = `https://www.pmu.fr/turf/direct/${date.split('-').reverse().join('')}/R${numR}C${numC}`;
+  window.open(url, 'pmu-direct', 'width=900,height=700,resizable=yes,scrollbars=yes');
 }
 
 function updateStats() {
