@@ -533,7 +533,7 @@ def get_paristurf_data(date_str, num_r, num_c):
                         if len(tips) >= 5: break
                     if len(tips) >= 5: break
                 
-                # Extraire les records km
+                # Extraire les records km (d'abord de Paris-Turf, puis Turfoo)
                 recs = {}
                 runners_data = state1["raceCardsState"].get("runners", {})
                 if race_id in runners_data:
@@ -542,6 +542,19 @@ def get_paristurf_data(date_str, num_r, num_c):
                         rec = (runner.get("records") or {}).get("harness") or (runner.get("records") or {}).get("distance") or (runner.get("records") or {}).get("flat")
                         if rec and hnum:
                             recs[hnum] = rec.get("redkm", "")
+                
+                # Si pas de records depuis Paris-Turf, chercher sur Turfoo
+                if not recs and race_id in runners_data:
+                    try:
+                        for runner in runners_data[race_id]:
+                            hnum = runner.get("horseNumber")
+                            hname = runner.get("horseName", "")
+                            if hnum and hname:
+                                rec = get_record_turfoo(hname)
+                                if rec:
+                                    recs[hnum] = rec
+                    except Exception as e:
+                        print(f"[!] Turfoo fallback: {e}")
                 
                 return {
                     "tips": tips,
@@ -555,6 +568,57 @@ def get_paristurf_data(date_str, num_r, num_c):
     except Exception as e:
         print(f"[ERROR] get_paristurf_data: {str(e)}")
         return {"tips": [], "records": {}}
+
+def get_record_turfoo(nom):
+    """Récupère le record km d'un cheval depuis Turfoo.fr"""
+    try:
+        from bs4 import BeautifulSoup
+        
+        def slugify(s):
+            slug = s.lower().strip()
+            replacements = [
+                ("'", "-"), ("'", "-"), (" ", "-"), ("é","e"), ("è","e"),
+                ("ê","e"), ("à","a"), ("â","a"), ("ô","o"), ("î","i"),
+                ("ç","c"), ("ù","u"), ("û","u"), ("ï","i"), ("ë","e"),
+            ]
+            for old, new_c in replacements:
+                slug = slug.replace(old, new_c)
+            slug = re.sub(r'[^a-z0-9-]', '', slug)
+            slug = re.sub(r'-+', '-', slug).strip('-')
+            return slug
+        
+        def format_record(raw):
+            """Convertir 147 → 1'14"7"""
+            raw = str(raw).strip()
+            if len(raw) == 3:
+                return f"1'{raw[:2]}\"{raw[2]}"
+            elif len(raw) == 4:
+                return f"1'{raw[:2]}\"{raw[2]}.{raw[3]}"
+            return raw
+        
+        slug = slugify(nom)
+        url = f"https://www.turfoo.fr/fiches/chevaux/{slug}/"
+        
+        try:
+            sess = requests.Session()
+            sess.headers.update({
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+            r = sess.get(url, timeout=8)
+            if r.status_code != 200:
+                return None
+            
+            soup = BeautifulSoup(r.text, "html.parser")
+            texte = soup.get_text(separator="|")
+            m = re.search(r'Record\|(\d{3,4})\|', texte)
+            if m:
+                return format_record(m.group(1))
+        except Exception as e:
+            pass
+        
+        return None
+    except Exception as e:
+        return None
 
 @app.route('/paristurf/<date_str>/<course_key>')
 @premium_required
