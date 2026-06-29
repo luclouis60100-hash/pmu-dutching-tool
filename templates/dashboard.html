@@ -1279,9 +1279,8 @@ function updateTicketBtn() {
 }
 
 function regarderDirect(numR, numC) {
-  const date = document.getElementById('date-picker')?.value || new Date().toISOString().slice(0,10);
-  const url = `https://www.pmu.fr/turf/direct/${date.split('-').reverse().join('')}/R${numR}C${numC}`;
-  window.open(url, 'pmu-direct', 'width=900,height=700,resizable=yes,scrollbars=yes');
+  const url = `https://www.pmu.fr/turf/live-et-replay/`;
+  window.open(url, 'pmu-direct', 'width=1000,height=800,resizable=yes,scrollbars=yes,left=200,top=100');
 }
 
 function updateStats() {
