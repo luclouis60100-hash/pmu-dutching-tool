@@ -569,10 +569,12 @@ def get_record_turfoo(nom):
         
         def slugify(s):
             slug = s.lower().strip()
+            # Supprimer accents
             replacements = [
-                ("'", "-"), ("'", "-"), (" ", "-"), ("é","e"), ("è","e"),
-                ("ê","e"), ("à","a"), ("â","a"), ("ô","o"), ("î","i"),
-                ("ç","c"), ("ù","u"), ("û","u"), ("ï","i"), ("ë","e"),
+                ("'", ""), ("'", ""), ("é","e"), ("è","e"), ("ê","e"),
+                ("à","a"), ("â","a"), ("ô","o"), ("î","i"), ("ç","c"),
+                ("ù","u"), ("û","u"), ("ï","i"), ("ë","e"),
+                (" ", "-"), ("-", "-")
             ]
             for old, new_c in replacements:
                 slug = slug.replace(old, new_c)
@@ -580,37 +582,51 @@ def get_record_turfoo(nom):
             slug = re.sub(r'-+', '-', slug).strip('-')
             return slug
         
-        def format_record(raw):
-            """Convertir 147 → 1'14"7"""
-            raw = str(raw).strip()
-            if len(raw) == 3:
-                return f"1'{raw[:2]}\"{raw[2]}"
-            elif len(raw) == 4:
-                return f"1'{raw[:2]}\"{raw[2]}.{raw[3]}"
-            return raw
+        if not nom or len(nom) < 2:
+            return None
         
         slug = slugify(nom)
+        if not slug:
+            return None
+        
         url = f"https://www.turfoo.fr/fiches/chevaux/{slug}/"
         
-        try:
-            sess = requests.Session()
-            sess.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            })
-            r = sess.get(url, timeout=8)
-            if r.status_code != 200:
-                return None
-            
-            soup = BeautifulSoup(r.text, "html.parser")
-            texte = soup.get_text(separator="|")
-            m = re.search(r'Record\|(\d{3,4})\|', texte)
-            if m:
-                return format_record(m.group(1))
-        except Exception as e:
-            pass
+        print(f"[→] Turfoo {nom} → {slug} → {url[-50:]}")
         
-        return None
+        sess = requests.Session()
+        sess.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        })
+        
+        r = sess.get(url, timeout=8)
+        print(f"    Status: {r.status_code}, Content-Length: {len(r.text)}")
+        
+        if r.status_code != 200:
+            return None
+        
+        soup = BeautifulSoup(r.text, "html.parser")
+        texte = soup.get_text(separator="|")
+        
+        # Chercher "Record" suivi de chiffres
+        matches = re.findall(r'Record[^0-9]*(\d{3,4})[^0-9]', texte)
+        
+        if matches:
+            raw = matches[0]
+            # Convertir 147 → 1'14"7
+            if len(raw) == 3:
+                result = f"1'{raw[:2]}\"{raw[2]}"
+            elif len(raw) == 4:
+                result = f"1'{raw[:2]}\"{raw[2]}.{raw[3]}"
+            else:
+                result = raw
+            print(f"    [✓] Record trouvé: {result}")
+            return result
+        else:
+            print(f"    [!] Pas de record trouvé dans le texte")
+            return None
+    
     except Exception as e:
+        print(f"    [!] Erreur: {e}")
         return None
 
 @app.route('/paristurf/<date_str>/<course_key>')
