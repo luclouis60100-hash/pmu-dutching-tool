@@ -430,36 +430,130 @@ def checkout_success():
         return redirect(url_for('pricing'))
 
 # ============================================
-# SCRAPERS (Paris-Turf, Records, etc.)
+# SCRAPERS - PARIS-TURF
 # ============================================
 
 def get_paristurf_data(date_str, num_r, num_c):
-    """Récupère les pronos et records Paris-Turf"""
+    """Récupère les pronostics Paris-Turf avec BeautifulSoup"""
     try:
+        from bs4 import BeautifulSoup
+        import unicodedata
+        
         sess = requests.Session()
         sess.headers.update({
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         })
         
-        # date_str arrive en DDMMYYYY, le convertir en YYYY-MM-DD
+        # Convertir date DDMMYYYY en format YYYY-MM-DD
         if len(date_str) == 8:
-            date_fmt_pt = f"{date_str[4:8]}-{date_str[2:4]}-{date_str[0:2]}"
+            date_fmt = f"{date_str[4:8]}-{date_str[2:4]}-{date_str[0:2]}"
         else:
-            date_fmt_pt = date_str
+            date_fmt = date_str
         
-        today_str = datetime.now().strftime("%Y-%m-%d")
+        def slugify(s):
+            s = s.lower().strip()
+            s = unicodedata.normalize("NFD", s)
+            s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+            s = re.sub(r"[^a-z0-9\s-]", "", s)
+            s = re.sub(r"\s+", "-", s)
+            return re.sub(r"-+", "-", s).strip("-")
         
-        if date_fmt_pt == today_str:
-            pt_home = "https://www.paris-turf.com/"
-        else:
-            pt_home = f"https://www.paris-turf.com/programme-courses/{date_fmt_pt}"
-        
-        print(f"[Paris-Turf] Chargement: {pt_home}")
-        
-        # Scraping logic...
-        return {"tips": [], "records": {}}
+        # Charger accueil Paris-Turf pour trouver l'URL de la course
+        try:
+            r0 = sess.get("https://www.paris-turf.com/", timeout=10)
+            soup0 = BeautifulSoup(r0.text, "html.parser")
+            script0 = soup0.find("script", id="__NEXT_DATA__")
+            
+            if script0:
+                data0 = json.loads(script0.string)
+                state0 = data0["props"]["pageProps"]["initialState"]
+                rcs = state0["raceCardsState"]
+                meetings = rcs.get("meetings", {})
+                races_all = rcs.get("races", {})
+                
+                # Chercher le meeting R{num_r}
+                target_meeting = None
+                races = []
+                for d_key, m_list in meetings.items():
+                    hit = next((m for m in m_list if m.get("pmuNumber") == num_r), None)
+                    if hit:
+                        target_meeting = hit
+                        races = races_all.get(d_key, [])
+                        break
+                
+                if not target_meeting:
+                    return {"tips": [], "records": {}}
+                
+                meet_id = target_meeting["id"]
+                meet_name = target_meeting.get("name", "")
+                
+                # Trouver la course C{num_c}
+                target_race = next((r for r in races if r.get("meetingId") == meet_id and r.get("number") == num_c), None)
+                if not target_race:
+                    return {"tips": [], "records": {}}
+                
+                race_uuid = target_race.get("uuid", "")
+                race_name = target_race.get("name", "")
+                race_id = str(target_race.get("id", ""))
+                
+                # Construire l'URL de la course
+                pt_url = f"https://www.paris-turf.com/course/{slugify(meet_name)}-{slugify(race_name)}-idc-{race_uuid}"
+                
+                print(f"[✓] Paris-Turf R{num_r}C{num_c}: {pt_url[-60:]}")
+                
+                # Charger la page de la course
+                r1 = sess.get(pt_url, timeout=15)
+                soup1 = BeautifulSoup(r1.text, "html.parser")
+                script1 = soup1.find("script", id="__NEXT_DATA__")
+                
+                if not script1:
+                    return {"tips": [], "records": {}}
+                
+                data1 = json.loads(script1.string)
+                state1 = data1["props"]["pageProps"]["initialState"]
+                cur = state1["currentPageState"]
+                
+                # Extraire les pronos
+                web_tips = cur.get("webTips") or {}
+                tips_raw = web_tips.get("tips", {})
+                tips = []
+                
+                for cat in ["A", "S", "C", "O", "G"]:
+                    t = tips_raw.get(cat)
+                    if not t: continue
+                    saddles = [int(x.strip()) for x in t.get("saddleList","").split(",") if x.strip()]
+                    names = [x.strip() for x in t.get("nameList","").split(",")]
+                    
+                    for i, num in enumerate(saddles):
+                        tips.append({
+                            "rang": len(tips)+1,
+                            "num": num,
+                            "nom": names[i] if i < len(names) else f"N°{num}"
+                        })
+                        if len(tips) >= 5: break
+                    if len(tips) >= 5: break
+                
+                # Extraire les records km
+                recs = {}
+                runners_data = state1["raceCardsState"].get("runners", {})
+                if race_id in runners_data:
+                    for runner in runners_data[race_id]:
+                        hnum = runner.get("horseNumber")
+                        rec = (runner.get("records") or {}).get("harness") or (runner.get("records") or {}).get("distance") or (runner.get("records") or {}).get("flat")
+                        if rec and hnum:
+                            recs[hnum] = rec.get("redkm", "")
+                
+                return {
+                    "tips": tips,
+                    "records": recs,
+                    "author": web_tips.get("author","Paris-Turf")
+                }
+        except Exception as e:
+            print(f"[!] Paris-Turf erreur: {e}")
+            return {"tips": [], "records": {}}
+    
     except Exception as e:
-        print(f"[ERROR] Paris-Turf: {str(e)}")
+        print(f"[ERROR] get_paristurf_data: {str(e)}")
         return {"tips": [], "records": {}}
 
 @app.route('/paristurf/<date_str>/<course_key>')
@@ -514,36 +608,6 @@ def proxy(path):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/programme/<date_str>/R<int:numR>/C<int:numC>/rapports-definitifs')
-@premium_required
-def rapports_definitifs(date_str, numR, numC):
-    """Rapports définitifs via client/61"""
-    try:
-        url = f"https://online.turfinfo.api.pmu.fr/rest/client/61/programme/{date_str}/R{numR}/C{numC}/rapports-definitifs?specialisation=INTERNET&combinaisonEnTableau=true"
-        r = requests.get(url, timeout=15)
-        return r.json()
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-# ============================================
-# ERROR HANDLERS
-# ============================================
-
-@app.errorhandler(404)
-def not_found(error):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_error(error):
-    return render_template('500.html'), 500
-
-# ============================================
-# RUN
-# ============================================
-
-if __name__ == '__main__':
-    app.run(debug=False, host='0.0.0.0', port=5000)
-
 # ============================================
 # EMAIL FUNCTIONS
 # ============================================
@@ -555,7 +619,6 @@ def send_email(to_email, subject, html_content):
         return False
     
     try:
-        import requests as req
         url = "https://api.sendgrid.com/v3/mail/send"
         headers = {
             "Authorization": f"Bearer {SENDGRID_API_KEY}",
@@ -574,22 +637,15 @@ def send_email(to_email, subject, html_content):
             }]
         }
         
-        response = req.post(url, json=data, headers=headers)
+        response = requests.post(url, json=data, headers=headers)
         return response.status_code == 202
     except Exception as e:
         print(f"❌ SendGrid error: {e}")
         return False
 
-# Update signup route to send confirmation email
-def updated_signup_with_email():
-    """Updated signup that sends confirmation email"""
-    pass
-
 # ============================================
 # BACKGROUND TASK - Email rappel 7j avant expiration
 # ============================================
-
-from apscheduler.schedulers.background import BackgroundScheduler
 
 def check_subscriptions_expiring_soon():
     """Envoyer rappel 7 jours avant expiration"""
@@ -637,3 +693,22 @@ scheduler.add_job(check_subscriptions_expiring_soon, 'cron', hour=9, minute=0)
 scheduler.start()
 
 print("✅ Email scheduler démarré (check quotidien à 9h UTC)")
+
+# ============================================
+# ERROR HANDLERS
+# ============================================
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return render_template('500.html'), 500
+
+# ============================================
+# RUN
+# ============================================
+
+if __name__ == '__main__':
+    app.run(debug=False, host='0.0.0.0', port=5000)
