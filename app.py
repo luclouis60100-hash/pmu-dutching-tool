@@ -434,7 +434,7 @@ def checkout_success():
 # ============================================
 
 def get_paristurf_data(date_str, num_r, num_c):
-    """Récupère les pronostics Paris-Turf avec BeautifulSoup"""
+    """Récupère les pronostics Paris-Turf + records depuis PMU + Turfoo"""
     try:
         from bs4 import BeautifulSoup
         import unicodedata
@@ -458,7 +458,10 @@ def get_paristurf_data(date_str, num_r, num_c):
             s = re.sub(r"\s+", "-", s)
             return re.sub(r"-+", "-", s).strip("-")
         
-        # Charger accueil Paris-Turf pour trouver l'URL de la course
+        tips = []
+        recs = {}
+        
+        # 1. PRONOS depuis Paris-Turf
         try:
             r0 = sess.get("https://www.paris-turf.com/", timeout=10)
             soup0 = BeautifulSoup(r0.text, "html.parser")
@@ -481,89 +484,79 @@ def get_paristurf_data(date_str, num_r, num_c):
                         races = races_all.get(d_key, [])
                         break
                 
-                if not target_meeting:
-                    return {"tips": [], "records": {}}
-                
-                meet_id = target_meeting["id"]
-                meet_name = target_meeting.get("name", "")
-                
-                # Trouver la course C{num_c}
-                target_race = next((r for r in races if r.get("meetingId") == meet_id and r.get("number") == num_c), None)
-                if not target_race:
-                    return {"tips": [], "records": {}}
-                
-                race_uuid = target_race.get("uuid", "")
-                race_name = target_race.get("name", "")
-                race_id = str(target_race.get("id", ""))
-                
-                # Construire l'URL de la course
-                pt_url = f"https://www.paris-turf.com/course/{slugify(meet_name)}-{slugify(race_name)}-idc-{race_uuid}"
-                
-                print(f"[✓] Paris-Turf R{num_r}C{num_c}: {pt_url[-60:]}")
-                
-                # Charger la page de la course
-                r1 = sess.get(pt_url, timeout=15)
-                soup1 = BeautifulSoup(r1.text, "html.parser")
-                script1 = soup1.find("script", id="__NEXT_DATA__")
-                
-                if not script1:
-                    return {"tips": [], "records": {}}
-                
-                data1 = json.loads(script1.string)
-                state1 = data1["props"]["pageProps"]["initialState"]
-                cur = state1["currentPageState"]
-                
-                # Extraire les pronos
-                web_tips = cur.get("webTips") or {}
-                tips_raw = web_tips.get("tips", {})
-                tips = []
-                
-                for cat in ["A", "S", "C", "O", "G"]:
-                    t = tips_raw.get(cat)
-                    if not t: continue
-                    saddles = [int(x.strip()) for x in t.get("saddleList","").split(",") if x.strip()]
-                    names = [x.strip() for x in t.get("nameList","").split(",")]
+                if target_meeting:
+                    meet_id = target_meeting["id"]
+                    meet_name = target_meeting.get("name", "")
                     
-                    for i, num in enumerate(saddles):
-                        tips.append({
-                            "rang": len(tips)+1,
-                            "num": num,
-                            "nom": names[i] if i < len(names) else f"N°{num}"
-                        })
-                        if len(tips) >= 5: break
-                    if len(tips) >= 5: break
-                
-                # Extraire les records km (d'abord de Paris-Turf, puis Turfoo)
-                recs = {}
-                runners_data = state1["raceCardsState"].get("runners", {})
-                if race_id in runners_data:
-                    for runner in runners_data[race_id]:
-                        hnum = runner.get("horseNumber")
-                        rec = (runner.get("records") or {}).get("harness") or (runner.get("records") or {}).get("distance") or (runner.get("records") or {}).get("flat")
-                        if rec and hnum:
-                            recs[hnum] = rec.get("redkm", "")
-                
-                # Si pas de records depuis Paris-Turf, chercher sur Turfoo
-                if not recs and race_id in runners_data:
-                    try:
-                        for runner in runners_data[race_id]:
-                            hnum = runner.get("horseNumber")
-                            hname = runner.get("horseName", "")
-                            if hnum and hname:
-                                rec = get_record_turfoo(hname)
-                                if rec:
-                                    recs[hnum] = rec
-                    except Exception as e:
-                        print(f"[!] Turfoo fallback: {e}")
-                
-                return {
-                    "tips": tips,
-                    "records": recs,
-                    "author": web_tips.get("author","Paris-Turf")
-                }
+                    # Trouver la course C{num_c}
+                    target_race = next((r for r in races if r.get("meetingId") == meet_id and r.get("number") == num_c), None)
+                    if target_race:
+                        race_uuid = target_race.get("uuid", "")
+                        race_name = target_race.get("name", "")
+                        
+                        # Construire l'URL de la course
+                        pt_url = f"https://www.paris-turf.com/course/{slugify(meet_name)}-{slugify(race_name)}-idc-{race_uuid}"
+                        
+                        print(f"[✓] Paris-Turf R{num_r}C{num_c}: {pt_url[-60:]}")
+                        
+                        # Charger la page de la course
+                        r1 = sess.get(pt_url, timeout=15)
+                        soup1 = BeautifulSoup(r1.text, "html.parser")
+                        script1 = soup1.find("script", id="__NEXT_DATA__")
+                        
+                        if script1:
+                            data1 = json.loads(script1.string)
+                            state1 = data1["props"]["pageProps"]["initialState"]
+                            cur = state1["currentPageState"]
+                            
+                            # Extraire les pronos
+                            web_tips = cur.get("webTips") or {}
+                            tips_raw = web_tips.get("tips", {})
+                            
+                            for cat in ["A", "S", "C", "O", "G"]:
+                                t = tips_raw.get(cat)
+                                if not t: continue
+                                saddles = [int(x.strip()) for x in t.get("saddleList","").split(",") if x.strip()]
+                                names = [x.strip() for x in t.get("nameList","").split(",")]
+                                
+                                for i, num in enumerate(saddles):
+                                    tips.append({
+                                        "rang": len(tips)+1,
+                                        "num": num,
+                                        "nom": names[i] if i < len(names) else f"N°{num}"
+                                    })
+                                    if len(tips) >= 5: break
+                                if len(tips) >= 5: break
         except Exception as e:
-            print(f"[!] Paris-Turf erreur: {e}")
-            return {"tips": [], "records": {}}
+            print(f"[!] Paris-Turf pronos: {e}")
+        
+        # 2. RECORDS depuis API PMU + Turfoo
+        try:
+            pmu_url = f"https://online.turfinfo.api.pmu.fr/rest/client/1/programme/{date_str}/R{num_r}/C{num_c}/participants?specialisation=INTERNET"
+            r_pmu = sess.get(pmu_url, timeout=10)
+            participants = r_pmu.json().get("participants", [])
+            
+            print(f"[✓] PMU API: {len(participants)} chevaux")
+            
+            # Pour chaque cheval, chercher record sur Turfoo
+            for p in participants:
+                if p.get("nonPartant"):
+                    continue
+                num = p.get("numPmu")
+                nom = p.get("nom", "")
+                if num and nom:
+                    rec = get_record_turfoo(nom)
+                    if rec:
+                        recs[num] = rec
+                        print(f"  [✓] Record {nom}: {rec}")
+        except Exception as e:
+            print(f"[!] PMU/Turfoo records: {e}")
+        
+        return {
+            "tips": tips,
+            "records": recs,
+            "author": "Paris-Turf + Turfoo"
+        }
     
     except Exception as e:
         print(f"[ERROR] get_paristurf_data: {str(e)}")
@@ -776,3 +769,34 @@ def internal_error(error):
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000)
+
+# ============================================
+# DEBUG ENDPOINT
+# ============================================
+
+@app.route('/debug/pronos/<date_str>/<course_key>')
+@login_required
+def debug_pronos(date_str, course_key):
+    """Debug endpoint pour voir ce qui est retourné"""
+    try:
+        parts = course_key.split('C')
+        num_r = int(parts[0].replace('R', ''))
+        num_c = int(parts[1])
+        
+        data = get_paristurf_data(date_str, num_r, num_c)
+        
+        return jsonify({
+            "date": date_str,
+            "course": course_key,
+            "tips_count": len(data.get("tips", [])),
+            "tips": data.get("tips", []),
+            "records_count": len(data.get("records", {})),
+            "records": data.get("records", {}),
+            "author": data.get("author", "")
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }), 500
